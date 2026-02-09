@@ -147,8 +147,10 @@ export default function About() {
                 data-cal-config='{"layout":"month_view","useSlotsViewOnSmallScreen":"true"}'
               >
                 <TiltFx>
-                <Icon paddingLeft="12" name="calendar" onBackground="brand-weak" />
-                <Row paddingX="12">Schedule a call</Row>
+                  <Row vertical="center">
+                    <Icon paddingLeft="12" name="calendar" onBackground="brand-weak" />
+                    <Row paddingX="12">Schedule a call</Row>
+                  </Row>
                 </TiltFx>
               </Row>
             )}

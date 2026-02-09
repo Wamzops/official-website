@@ -1,6 +1,6 @@
 import { Mailchimp } from "@/components";
 import { Musings } from "@/components/musing/Musings";
-import { baseURL, blog,  newsletter, person, musings } from "@/resources";
+import { baseURL, blog, newsletter, person, musings } from "@/resources";
 import { Column, Heading, Meta, Schema } from "@once-ui-system/core";
 
 export async function generateMetadata() {
@@ -17,7 +17,7 @@ export default function Musing() {
   return (
     <Column maxWidth="m" paddingTop="24">
       <Schema
-        as="musingsPosting"
+        as="blogPosting"
         baseURL={baseURL}
         title={musings.title}
         description={musings.description}
