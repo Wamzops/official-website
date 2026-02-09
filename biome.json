@@ -6,7 +6,8 @@
     "useIgnoreFile": false
   },
   "files": {
-    "ignoreUnknown": false
+    "ignoreUnknown": false,
+    "ignore": ["node_modules", "dist", "build", ".next", ".next/types", ".next/dev/types"]
   },
   "formatter": {
     "enabled": true,
@@ -16,7 +17,12 @@
   },
   "linter": {
     "enabled": true,
-    "rules": { "recommended": true }
+    "rules": {
+      "recommended": false,
+      "style": {
+        "useImportType": "error"
+      }
+    }
   },
   "javascript": {
     "formatter": {

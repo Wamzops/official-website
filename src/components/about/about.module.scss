@@ -2,9 +2,51 @@
 
 .hover {
     transition: var(--transition-micro-medium);
+    cursor: pointer;
 
     &:hover {
         transform: translateX(var(--static-space-4));
+    }
+}
+
+.card {
+    border: 1px solid var(--neutral-alpha-medium);
+    background: transparent;
+    border-radius: var(--radius-l);
+    padding: var(--static-space-24);
+    transition: var(--transition-micro-medium);
+
+    &:hover {
+        border-color: var(--neutral-alpha-strong);
+        background: var(--neutral-alpha-medium);
+    }
+}
+
+
+.cardBorder {
+  border: 1px solid var(--neutral-alpha-medium);
+  background: transparent;
+  border-radius: 12px;
+  padding: var(--static-space-24);
+
+      &:hover {
+        border-color: var(--neutral-alpha-strong);
+        background: var(--neutral-alpha-medium);
+    }
+}
+
+
+
+.cardGhost {
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: var(--radius-l);
+    padding: var(--static-space-24);
+    transition: var(--transition-micro-medium);
+
+    &:hover {
+        border-color: var(--neutral-alpha-medium);
+        background: var(--neutral-alpha-weak);
     }
 }
 

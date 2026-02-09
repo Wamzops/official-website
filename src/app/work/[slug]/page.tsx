@@ -1,25 +1,28 @@
-import { notFound } from "next/navigation";
+console.log("ON THE SLUG PAGE");
+
+
+import { CustomMDX, ScrollToHash } from "@/components";
+import { Projects } from "@/components/work/Projects";
+import { about, baseURL, person, work } from "@/resources";
+import { formatDate } from "@/utils/formatDate";
 import { getPosts } from "@/utils/utils";
 import {
-  Meta,
-  Schema,
+  Avatar,
   AvatarGroup,
   Button,
   Column,
   Flex,
   Heading,
-  Media,
-  Text,
-  SmartLink,
-  Row,
-  Avatar,
   Line,
+  Media,
+  Meta,
+  Row,
+  Schema,
+  SmartLink,
+  Text,
 } from "@once-ui-system/core";
-import { baseURL, about, person, work } from "@/resources";
-import { formatDate } from "@/utils/formatDate";
-import { ScrollToHash, CustomMDX } from "@/components";
-import { Metadata } from "next";
-import { Projects } from "@/components/work/Projects";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 
 export async function generateStaticParams(): Promise<{ slug: string }[]> {
   const posts = getPosts(["src", "app", "work", "projects"]);

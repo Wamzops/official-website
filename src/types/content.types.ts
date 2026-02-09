@@ -1,5 +1,5 @@
-import { IconName } from "@/resources/icons";
-import { zones } from "tzdata";
+import type { IconName } from "@/resources/icons";
+import type { zones } from "tzdata";
 
 /**
  * IANA time zone string (e.g., 'Asia/Calcutta', 'Europe/Vienna').
@@ -150,6 +150,8 @@ export interface About extends BasePageConfig {
       timeframe: string;
       /** Role or job title */
       role: string;
+      /** Company logo path */
+      logo?: string;
       /** Achievements at the company */
       achievements: React.ReactNode[];
       /** Images related to the experience */
@@ -176,7 +178,25 @@ export interface About extends BasePageConfig {
       /** Institution name */
       name: string;
       /** Description of studies */
-      description: React.ReactNode;
+      description: React.ReactNode; 
+      // Added new fields for better visual presentation
+      data?: {
+        course?: string;
+        grade?: string;
+        skills?: string[];
+        activities?: string[];
+      }
+    }>;
+  };
+  /** Technical Expertise section */
+  technicalExpertise: {
+    display: boolean;
+    title: string;
+    description: React.ReactNode;
+    expertise: Array<{
+      title: string;
+      icon: IconName;
+      tags: string[];
     }>;
   };
   /** Technical skills section */
@@ -191,6 +211,16 @@ export interface About extends BasePageConfig {
       title: string;
       /** Skill description */
       description?: React.ReactNode;
+      /** Issuer of the certification */
+      issuer: string;
+      /** Year of certification */
+      year: string;
+      /** Category for filtering */
+      category: string;
+      /** URL to verification page */
+      verifyUrl?: string;
+      /** Path to logo image or icon name */
+      logo?: string;
       /** Skill tags */
       tags?: Array<{
         name: string;
@@ -224,17 +254,7 @@ export interface Blog extends BasePageConfig {}
 export interface Work extends BasePageConfig {}
 
 /**
- * Gallery page configuration.
- * @description Configuration for the Gallery page, including metadata, navigation label, and image list.
+ * Musings page configuration.
+ * @description Configuration for the Musings page, including metadata and navigation label.
  */
-export interface Gallery extends BasePageConfig {
-  /** List of images in the gallery */
-  images: Array<{
-    /** Image source path */
-    src: string;
-    /** Image alt text */
-    alt: string;
-    /** Image orientation (horizontal/vertical) */
-    orientation: string;
-  }>;
-}
+export interface Musings extends BasePageConfig {}

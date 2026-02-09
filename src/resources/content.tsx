@@ -1,15 +1,16 @@
-import { About, Blog, Gallery, Home, Newsletter, Person, Social, Work } from "@/types";
-import { Line, Row, Text } from "@once-ui-system/core";
+import type { About, Blog, Musings, Home, Newsletter, Person, Social, Work } from "@/types";
+import { Column, Line, Row, Tag, Text } from "@once-ui-system/core";
+import Image from "next/image";
 
 const person: Person = {
-  firstName: "Selene",
-  lastName: "Yu",
-  name: `Selene Yu`,
-  role: "Design Engineer",
-  avatar: "/images/avatar.jpg",
-  email: "example@gmail.com",
-  location: "Asia/Jakarta", // Expecting the IANA time zone identifier, e.g., 'Europe/Vienna'
-  languages: ["English", "Bahasa"], // optional: Leave the array empty if you don't want to display languages
+  firstName: "Colette",
+  lastName: "Muiruri",
+  name: `Colette Muiruri`,
+  role: "Data Engineer",
+  avatar: "/images/avatar.png",
+  email: "wamuchiecolette@gmail.com",
+  location: "Africa/Nairobi", // Expecting the IANA time zone identifier, e.g., 'Europe/Vienna'
+  languages: ["English", "Swahili"], // optional: Leave the array empty if you don't want to display languages
 };
 
 const newsletter: Newsletter = {
@@ -25,25 +26,13 @@ const social: Social = [
   {
     name: "GitHub",
     icon: "github",
-    link: "https://github.com/once-ui-system",
+    link: "https://github.com/wamzops",
     essential: true,
   },
   {
     name: "LinkedIn",
     icon: "linkedin",
-    link: "https://www.linkedin.com/company/once-ui/",
-    essential: true,
-  },
-  {
-    name: "Instagram",
-    icon: "instagram",
-    link: "https://www.instagram.com/once_ui/",
-    essential: false,
-  },
-  {
-    name: "Threads",
-    icon: "threads",
-    link: "https://www.threads.com/@once_ui",
+    link: "https://www.linkedin.com/in/wamuchiecolette/",
     essential: true,
   },
   {
@@ -60,24 +49,29 @@ const home: Home = {
   label: "Home",
   title: `${person.name}'s Portfolio`,
   description: `Portfolio website showcasing my work as a ${person.role}`,
-  headline: <>Building bridges between design and code</>,
+  headline: <>Build. Lead. Teach. </>,
   featured: {
     display: true,
     title: (
       <Row gap="12" vertical="center">
-        <strong className="ml-4">Once UI</strong>{" "}
+        <strong className="ml-4">Data Engineering</strong>{" "}
         <Line background="brand-alpha-strong" vert height="20" />
         <Text marginRight="4" onBackground="brand-medium">
           Featured work
         </Text>
       </Row>
     ),
-    href: "/work/building-once-ui-a-customizable-design-system",
+    href: "/work/project_1",
   },
   subline: (
     <>
-    I'm Selene, a design engineer at <Text as="span" size="xl" weight="strong">ONCE UI</Text>, where I craft intuitive <br /> user experiences. After hours, I build my own projects.
-</>
+      Hi! I am Colette, a technology consultant at{" "}
+      <Text as="span" size="m" weight="strong" color="brand-strong">
+        PwC, Kenya
+      </Text>
+      , where I help companies build resilient <br /> data solutions. I also build my own projects
+      during my spare time.
+    </>
   ),
 };
 
@@ -102,9 +96,9 @@ const about: About = {
     title: "Introduction",
     description: (
       <>
-        Selene is a Jakarta-based design engineer with a passion for transforming complex challenges
-        into simple, elegant design solutions. Her work spans digital interfaces, interactive
-        experiences, and the convergence of design and technology.
+        Colette is a Nairobi-based data engineer with a passion for transforming complex challenges
+        into simple and resilient data solutions. Her work spans data engineering, data analytics,
+        and its application in sustainable development.
       </>
     ),
   },
@@ -113,41 +107,55 @@ const about: About = {
     title: "Work Experience",
     experiences: [
       {
-        company: "FLY",
-        timeframe: "2022 - Present",
-        role: "Senior Design Engineer",
+        company: "Pricewaterhousecoopers (PwC) Kenya",
+        timeframe: "2023 - Present",
+        role: "Technology Consultant",
         achievements: [
           <>
-            Redesigned the UI/UX for the FLY platform, resulting in a 20% increase in user
-            engagement and 30% faster load times.
+            Designed, documented, and implemented enterprise-wide data governance policies and
+            procedures for data handling, usage, and lifecycle management for a large retailer with
+            a 200TB+ data environment.
           </>,
           <>
-            Spearheaded the integration of AI tools into design workflows, enabling designers to
-            iterate 50% faster.
+            Utilised expertise in SQL, SQL Server Management Tools, and Alteryx to build queries,
+            automate validation processes, and transform complex data sets, directly supporting the
+            migration of 90+ key business entities for a Kenyan retail company from Microsoft AX to
+            Microsoft Dynamics 365.
+          </>,
+          <>
+            Audited IT systems and controls for 5+ Tier 1 banks in Kenya, assessing technology risk,
+            regulatory compliance, and governance frameworks which helped to strengthen operational
+            resilience and align IT with business objectives.
+          </>,
+          <>
+            Served as Secretary on the founding committee of PwC Toastmasters, coordinating
+            meetings, managing documentation, and driving membership growth.
           </>,
         ],
         images: [
           // optional: leave the array empty if you don't want to display images
-          {
-            src: "/images/projects/project-01/cover-01.jpg",
-            alt: "Once UI Project",
-            width: 16,
-            height: 9,
-          },
         ],
       },
       {
-        company: "Creativ3",
-        timeframe: "2018 - 2022",
-        role: "Lead Designer",
+        company: "ExploreAI Academy",
+        timeframe: " September 2023 - December 2023",
+        role: "Data Science Intern",
         achievements: [
           <>
-            Developed a design system that unified the brand across multiple platforms, improving
-            design consistency by 40%.
+            Led an international student team in the design, development, and deployment of a Gross
+            Domestic Product (GDP) prediction application for South Africa using Python and Amazon
+            S3 and EC2 services, achieving an 87% model accuracy in forecasting the country's
+            economic performance
           </>,
           <>
-            Led a cross-functional team to launch a new product line, contributing to a 15% increase
-            in overall company revenue.
+            Authored and published a comprehensive report on the application of geospatial data and
+            satellite imagery in economic and financial modelling and provided actionable
+            recommendations for policymakers and businesses.
+          </>,
+          <>
+            Orchestrated seamless communication and project management across time zones using tools
+            such as Slack, Zoom, ClickUp and Trello, achieving 100% on-time delivery of project
+            milestones.
           </>,
         ],
         images: [],
@@ -156,77 +164,179 @@ const about: About = {
   },
   studies: {
     display: true, // set to false to hide this section
-    title: "Studies",
+    title: "Education",
     institutions: [
       {
-        name: "University of Jakarta",
-        description: <>Studied software engineering.</>,
+        name: "Kenyatta University",
+        description: (
+          <Column gap="8" paddingBottom = "20">
+            <Column gap="4">
+              <Text onBackground="neutral-strong">
+                Bachelor of Science in Biomedical Engineering
+              </Text>
+              <Text variant="body-default-s" onBackground="neutral-weak">
+                Second Class Honours, Upper Division
+              </Text>
+            </Column>
+            <Row wrap gap="8">
+              {[
+                "IEEE Student Branch",
+                "Vice-chairperson Toastmasters Gavel Club",
+                "Pivot Club member",
+              ].map((activity) => (
+                <Tag key={activity} size="s" variant="brand">
+                  {activity}
+                </Tag>
+              ))}
+            </Row>
+          </Column>
+        ),
+      },
+    
+      {
+        name: "ExploreAI Academy",
+        description: (
+          <Column gap="8">
+            <Column gap="4">
+              <Text onBackground="neutral-strong">Data Science</Text>
+              <Text variant="body-default-s" onBackground="neutral-weak">
+                Distinction
+              </Text>
+            </Column>
+            <Row wrap gap="8">
+              {["Python", "SQL", "Machine Learning", "Data Visualization", "Cloud Computing"].map(
+                (skill) => (
+                  <Tag key={skill} size="s" variant="brand">
+                    {skill}
+                  </Tag>
+                ),
+              )}
+            </Row>
+          </Column>
+        ),
+      },
+    ],
+  },
+  technicalExpertise: {
+    display: true,
+    title: "Technical Expertise",
+    description: <>These are the skills I have honed through learning and doing:</>,
+    expertise: [
+      {
+        title: "Data Analytics & Engineering",
+        icon: "databaseBold",
+        tags: ["Python", "SQL", "Alteryx", "Athena", "BigQuery", "Excel (Advanced)"],
       },
       {
-        name: "Build the Future",
-        description: <>Studied online marketing and personal branding.</>,
+        title: "Visualization & Reporting",
+        icon: "chart",
+        tags: ["Power BI", "Looker", "QuickSight", "Tableau"],
+      },
+      {
+        title: "Cloud & Data Platforms",
+        icon: "cloud",
+        tags: ["Azure", "AWS", "Google Cloud Platform", "Oracle Cloud"],
+      },
+      {
+        title: "Governance & Compliance",
+        icon: "shield",
+        tags: ["ISO 27001", "GDPR", "IT General Controls", "Application Controls"],
       },
     ],
   },
   technical: {
     display: true, // set to false to hide this section
-    title: "Technical skills",
+    title: "Certifications & Training",
     skills: [
       {
-        title: "Figma",
+        title: "AWS Certified Solutions Architect - Associate",
         description: (
-          <>Able to prototype in Figma with Once UI with unnatural speed.</>
+          <>
+            Validates knowledge of designing secure, resilient, high-performing, and cost-optimized
+            architectures using AWS services.
+          </>
         ),
+        issuer: "Amazon Web Services",
+        year: "2025",
+        logo: "/images/logos/aws.svg",
+        category: "Data",
+        verifyUrl: "https://www.credly.com/badges/e8c9ca05-3c61-410a-a937-f10a3738c131",
         tags: [
-          {
-            name: "Figma",
-            icon: "figma",
-          },
-        ],
-        // optional: leave the array empty if you don't want to display images
-        images: [
-          {
-            src: "/images/projects/project-01/cover-02.jpg",
-            alt: "Project image",
-            width: 16,
-            height: 9,
-          },
-          {
-            src: "/images/projects/project-01/cover-03.jpg",
-            alt: "Project image",
-            width: 16,
-            height: 9,
-          },
+          { name: "Data preparation" },
+          { name: "Data Modeling" },
+          { name: "Data Analysis & Visualization" },
+          { name: "Managing & Securing Power BI" },
         ],
       },
       {
-        title: "Next.js",
+        title: "Google Associate Data Practitioner",
         description: (
-          <>Building next gen apps with Next.js + Once UI + Supabase.</>
+          <>
+            Demonstrates knowledge of data transformation, analysis, and visualization to support
+            data-driven decision-making using google cloud services.
+          </>
         ),
+        issuer: "Google",
+        year: "2025",
+        logo: "/images/logos/google.svg",
+        category: "Data",
+        verifyUrl: "https://www.credly.com/badges/4a537c16-a1fd-4666-8526-8d22dbacdafe/public_url",
         tags: [
-          {
-            name: "JavaScript",
-            icon: "javascript",
-          },
-          {
-            name: "Next.js",
-            icon: "nextjs",
-          },
-          {
-            name: "Supabase",
-            icon: "supabase",
-          },
+          { name: "Data Analysis" },
+          { name: "Data Modeling" },
+          { name: "Data Visualization" },
         ],
-        // optional: leave the array empty if you don't want to display images
-        images: [
-          {
-            src: "/images/projects/project-01/cover-04.jpg",
-            alt: "Project image",
-            width: 16,
-            height: 9,
-          },
+      },
+      {
+        title: "Microsoft Certified: Azure Fundamentals",
+        description: (
+          <>
+            Validates foundational knowledge of cloud concepts, core Azure services, security,
+            privacy, compliance, and Azure pricing and support.
+          </>
+        ),
+        issuer: "Microsoft",
+        year: "2024",
+        logo: "/images/logos/azure.svg", // Assumes "google" exists in iconLibrary
+        category: "Cloud Platforms",
+        tags: [{ name: "Google Cloud Platform" }, { name: "BigQuery" }, { name: "Looker" }],
+        verifyUrl:
+          "https://learn.microsoft.com/api/credentials/share/en-us/ColetteMuiruriKE-1115/F621759D3A46918A?sharingId=50F6AF18E5FE4E36",
+      },
+      {
+        title: "Microsoft Dynamics 365 Fundamentals (ERP)",
+        description: (
+          <>
+            Confirms fundamental knowledge of the finance and operations capabilities of Microsoft
+            Dynamics 365.
+          </>
+        ),
+        issuer: "Microsoft",
+        year: "2024",
+        logo: "/images/logos/microsoft.svg",
+        category: "ERP",
+        tags: [
+          { name: "Dynamics 365" },
+          { name: "Finance & Operations" },
+          { name: "Supply Chain Management" },
         ],
+        verifyUrl:
+          "https://learn.microsoft.com/api/credentials/share/en-us/ColetteMuiruriKE-1115/F0C1436517501A6A?sharingId=50F6AF18E5FE4E36",
+      },
+      {
+        title: "AWS Cloud Practitioner",
+        description: (
+          <>
+            Validates foundational knowledge of AWS Cloud concepts, core services, security and
+            compliance, pricing, and billing models.
+          </>
+        ),
+        issuer: "Amazon Web Services",
+        year: "2024",
+        logo: "/images/logos/aws.svg",
+        category: "Cloud Platforms",
+        tags: [{ name: "AWS" }, { name: "Cloud Computing" }, { name: "Cloud Services" }],
+        verifyUrl: "https://www.credly.com/badges/78915560-7942-437b-b092-a192f11cfd7a",
       },
     ],
   },
@@ -237,8 +347,6 @@ const blog: Blog = {
   label: "Blog",
   title: "Writing about design and tech...",
   description: `Read what ${person.name} has been up to recently`,
-  // Create new blog posts by adding a new .mdx file to app/blog/posts
-  // All posts will be listed on the /blog route
 };
 
 const work: Work = {
@@ -246,59 +354,14 @@ const work: Work = {
   label: "Work",
   title: `Projects – ${person.name}`,
   description: `Design and dev projects by ${person.name}`,
-  // Create new project pages by adding a new .mdx file to app/blog/posts
-  // All projects will be listed on the /home and /work routes
+
 };
 
-const gallery: Gallery = {
-  path: "/gallery",
-  label: "Gallery",
-  title: `Photo gallery – ${person.name}`,
-  description: `A photo collection by ${person.name}`,
-  // Images by https://lorant.one
-  // These are placeholder images, replace with your own
-  images: [
-    {
-      src: "/images/gallery/horizontal-1.jpg",
-      alt: "image",
-      orientation: "horizontal",
-    },
-    {
-      src: "/images/gallery/vertical-4.jpg",
-      alt: "image",
-      orientation: "vertical",
-    },
-    {
-      src: "/images/gallery/horizontal-3.jpg",
-      alt: "image",
-      orientation: "horizontal",
-    },
-    {
-      src: "/images/gallery/vertical-1.jpg",
-      alt: "image",
-      orientation: "vertical",
-    },
-    {
-      src: "/images/gallery/vertical-2.jpg",
-      alt: "image",
-      orientation: "vertical",
-    },
-    {
-      src: "/images/gallery/horizontal-2.jpg",
-      alt: "image",
-      orientation: "horizontal",
-    },
-    {
-      src: "/images/gallery/horizontal-4.jpg",
-      alt: "image",
-      orientation: "horizontal",
-    },
-    {
-      src: "/images/gallery/vertical-3.jpg",
-      alt: "image",
-      orientation: "vertical",
-    },
-  ],
+const musings: Musings = {
+  path: "/musings",
+  label: "Musings",
+  title: "A collection of my notes from life...",
+  description: `A collection of my notes from life...`,
 };
 
-export { person, social, newsletter, home, about, blog, work, gallery };
+export { person, social, newsletter, home, about, blog, work, musings };

@@ -5,9 +5,9 @@ import { useEffect, useState } from "react";
 
 import { Fade, Flex, Line, Row, ToggleButton } from "@once-ui-system/core";
 
-import { routes, display, person, about, blog, work, gallery } from "@/resources";
-import { ThemeToggle } from "./ThemeToggle";
+import { about, blog, display, person, routes, work, musings } from "@/resources";
 import styles from "./Header.module.scss";
+import { ThemeToggle } from "./ThemeToggle";
 
 type TimeDisplayProps = {
   timeZone: string;
@@ -90,6 +90,7 @@ export const Header = () => {
                 <ToggleButton prefixIcon="home" href="/" selected={pathname === "/"} />
               )}
               <Line background="neutral-alpha-medium" vert maxHeight="24" />
+
               {routes["/about"] && (
                 <>
                   <Row s={{ hide: true }}>
@@ -109,6 +110,7 @@ export const Header = () => {
                   </Row>
                 </>
               )}
+
               {routes["/work"] && (
                 <>
                   <Row s={{ hide: true }}>
@@ -128,6 +130,7 @@ export const Header = () => {
                   </Row>
                 </>
               )}
+
               {routes["/blog"] && (
                 <>
                   <Row s={{ hide: true }}>
@@ -147,25 +150,27 @@ export const Header = () => {
                   </Row>
                 </>
               )}
-              {routes["/gallery"] && (
+
+              {routes["/musings"] && (
                 <>
                   <Row s={{ hide: true }}>
                     <ToggleButton
-                      prefixIcon="gallery"
-                      href="/gallery"
-                      label={gallery.label}
-                      selected={pathname.startsWith("/gallery")}
+                      prefixIcon="rocket"
+                      href="/musings"
+                      label={musings.label}
+                      selected={pathname.startsWith("/musings")}
                     />
                   </Row>
                   <Row hide s={{ hide: false }}>
                     <ToggleButton
-                      prefixIcon="gallery"
-                      href="/gallery"
-                      selected={pathname.startsWith("/gallery")}
+                      prefixIcon="rocket"
+                      href="/musings"
+                      selected={pathname.startsWith("/musings")}
                     />
                   </Row>
                 </>
               )}
+
               {display.themeSwitcher && (
                 <>
                   <Line background="neutral-alpha-medium" vert maxHeight="24" />
@@ -182,11 +187,7 @@ export const Header = () => {
             vertical="center"
             textVariant="body-default-s"
             gap="20"
-          >
-            <Flex s={{ hide: true }}>
-              {display.time && <TimeDisplay timeZone={person.location} />}
-            </Flex>
-          </Flex>
+          ></Flex>
         </Flex>
       </Row>
     </>

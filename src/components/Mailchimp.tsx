@@ -1,22 +1,19 @@
 "use client";
 
 import { mailchimp, newsletter } from "@/resources";
-import { Button, Heading, Input, Text, Background, Column, Row } from "@once-ui-system/core";
-import { opacity, SpacingToken } from "@once-ui-system/core";
-import { useState } from "react";
-
-function debounce<T extends (...args: any[]) => void>(func: T, delay: number): T {
-  let timeout: ReturnType<typeof setTimeout>;
-  return ((...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), delay);
-  }) as T;
-}
+import { Background, Button, Column, Heading, Input, Row, Text } from "@once-ui-system/core";
+import type { SpacingToken, opacity } from "@once-ui-system/core";
+import { useState, useRef } from "react";
 
 export const Mailchimp: React.FC<React.ComponentProps<typeof Column>> = ({ ...flex }) => {
   const [email, setEmail] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [touched, setTouched] = useState<boolean>(false);
+  const [success, setSuccess] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  // Ref to hold the timeout ID for debouncing
+  const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const validateEmail = (email: string): boolean => {
     if (email === "") {
@@ -27,10 +24,7 @@ export const Mailchimp: React.FC<React.ComponentProps<typeof Column>> = ({ ...fl
     return emailPattern.test(email);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setEmail(value);
-
+  const handleValidation = (value: string) => {
     if (!validateEmail(value)) {
       setError("Please enter a valid email address.");
     } else {
@@ -38,12 +32,74 @@ export const Mailchimp: React.FC<React.ComponentProps<typeof Column>> = ({ ...fl
     }
   };
 
-  const debouncedHandleChange = debounce(handleChange, 2000);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setEmail(value);
+
+    // Clear success message when user starts typing again
+    if (success) setSuccess(false);
+
+    // Clear any pending validation timeout
+    if (validationTimeoutRef.current) {
+      clearTimeout(validationTimeoutRef.current);
+    }
+
+    // If there is already an error, validate immediately
+    if (error) {
+      handleValidation(value);
+    } else {
+      // Otherwise, debounce validation by 2 seconds
+      validationTimeoutRef.current = setTimeout(() => {
+        handleValidation(value);
+      }, 2000);
+    }
+  };
 
   const handleBlur = () => {
     setTouched(true);
+    // Validate immediately on blur
     if (!validateEmail(email)) {
       setError("Please enter a valid email address.");
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (validationTimeoutRef.current) {
+      clearTimeout(validationTimeoutRef.current);
+    }
+
+    if (!email || !validateEmail(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/newsletters", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess(true);
+        setEmail("");
+        setTouched(false);
+      } else {
+        setError(data.error || "Something went wrong. Please try again.");
+      }
+    } catch (err) {
+      setError("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -118,65 +174,34 @@ export const Mailchimp: React.FC<React.ComponentProps<typeof Column>> = ({ ...fl
           display: "flex",
           justifyContent: "center",
         }}
-        action={mailchimp.action}
-        method="post"
-        id="mc-embedded-subscribe-form"
-        name="mc-embedded-subscribe-form"
+        onSubmit={handleSubmit}
       >
-        <Row
-          id="mc_embed_signup_scroll"
-          fillWidth
-          maxWidth={24}
-          s={{ direction: "column" }}
-          gap="8"
-        >
+        <Row fillWidth maxWidth={24} s={{ direction: "column" }} gap="8">
           <Input
             formNoValidate
             id="mce-EMAIL"
             name="EMAIL"
             type="email"
             placeholder="Email"
+            value={email}
             required
-            onChange={(e) => {
-              if (error) {
-                handleChange(e);
-              } else {
-                debouncedHandleChange(e);
-              }
-            }}
+            onChange={handleChange}
             onBlur={handleBlur}
             errorMessage={error}
           />
-          <div style={{ display: "none" }}>
-            <input
-              type="checkbox"
-              readOnly
-              name="group[3492][1]"
-              id="mce-group[3492]-3492-0"
-              value=""
-              checked
-            />
-          </div>
-          <div id="mce-responses" className="clearfalse">
-            <div className="response" id="mce-error-response" style={{ display: "none" }}></div>
-            <div className="response" id="mce-success-response" style={{ display: "none" }}></div>
-          </div>
-          <div aria-hidden="true" style={{ position: "absolute", left: "-5000px" }}>
-            <input
-              type="text"
-              readOnly
-              name="b_c1a5a210340eb6c7bff33b2ba_0462d244aa"
-              tabIndex={-1}
-              value=""
-            />
-          </div>
-          <div className="clear">
-            <Row height="48" vertical="center">
-              <Button id="mc-embedded-subscribe" value="Subscribe" size="m" fillWidth>
-                Subscribe
-              </Button>
-            </Row>
-          </div>
+          <Row height="48" vertical="center">
+            <Button
+              id="mc-embedded-subscribe"
+              value="Subscribe"
+              size="m"
+              fillWidth
+              type="submit"
+              loading={loading}
+              variant={success ? "secondary" : "primary"}
+            >
+              {success ? "Subscribed!" : "Subscribe"}
+            </Button>
+          </Row>
         </Row>
       </form>
     </Column>
