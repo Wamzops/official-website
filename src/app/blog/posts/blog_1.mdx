@@ -1,13 +1,18 @@
 ---
-title: "Geospatial analytics with BigQuery"
-subtitle: "A comprehensive guide to using BigQuery to analyze large geospatial datasets"
+title: "Geospatial analytics"
+subtitle: "Exploring economic activity using Nighttime Satellite Imagery"
 summary: "A beginner friendly guide to using BigQuery to analyze large geospatial datasets."
 image: "/images/blogs/blog_1.png"
 publishedAt: "2026-02-02"
 tag: "Geospatial analytics"
 ---
 
-## About
+## Introduction
+Nighttime lights (NTL) data have become a widely recognized proxy to monitor economic activity at the national, subnational, and supranational levels.
+The use of NTL data can offer considerable advantages over traditional economic indicators, such as GDP. For example, NTL data provide greater spatial granularity, are more timely, and are less costly to construct than GDP. Furthermore, NTL data are comparable between multiple regions, regardless of differences in statistical capacity, political interference, or informal activities.
+In regional science, several topics could benefit from the use of nighttime light data. One main topic is the study of regional development and inequality. Researchers have used nighttime light data as a proxy for subnational income and have found evidence of increasing or decreasing regional inequality over time (Lessmann, Seidel, 2017). These data can also be used to examine the relationship between regional development and various factors, such as ethnic inequality (Alesina et al., 2016). Additionally, nighttime light data can be used to analyze the impact of localized policies (Kim et al., 2024). Overall, nighttime light data provide further opportunities to study economic performance and development at the subnational level, particularly in regions where reliable data are difficult to obtain (see the survey article of Gibson et al. (2020) for a more comprehensive overview the use of NTL in economics and Zheng et al. (2023) for an overview of urban applications).
+Despite their potential benefits, the latest NTL data products (Elvidge et al., 2017, 2021; Li et al., 2020; Román et al., 2018) have had limited use in the regional science literature. One plausible reason is the lack of accessible methods for processing and analyzing satellite images. Specifically, the processing of large raster-based satellite images into tabular data has made it difficult for researchers to use the latest satellite data products. To address this issue, we introduce a geocomputational notebook that provides a step-by-step guide on how to process and analyze recent satellite NTL images. To illustrate the functionality of this notebook, we study the evolution of regional disparities
+in South Africa.
 
-Apache Spark and RasterFrames the big data geospatial processing juggernaut. 
 
+Accessing, processing, and analyzing satellite data requires a basic understanding of remote sensing and programming principles. To lessen the learning curve and encourage the use of these data, a growing number of researchers have been sharing their data processing routines as libraries or functions across several programming languages. For instance, Falchetta (2023), Miethe (2023) and Njuguna (2020) have developed R libraries dedicated to extracting data from nightlight satellite imagery. Raschky (2020) has provided Python functions for the same purpose. Patnaik et al. (2023) have assembled a Julia library that specializes in processing nightlight imagery. With the same motivation, our contribution lies in presenting an alternative, yet complementary, approach for processing and analyzing satellite imagery. By leveraging the pedagogical and computational features of Jupyter notebooks (Rowe et al., 2020; Reades, 2020; Chen et al., 2020), our cloud-based geocomputational Jupyter notebook provides an integrated environment for efficient code execution, interactive data visualization, and narrative documentation.
