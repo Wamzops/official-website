@@ -6,19 +6,487 @@ images:
   - "/images/projects/cover_2.jpg"
 
 ---
-## Overview
+The purpose of completing the following checklist is to provide the rationale for the project and to validate that the idea makes sense to put Research and Development (R&D) effort into.
+# Project Summary
+
+## Introduction
+>
+> Traditional GDP estimates are authoritative but often come with reporting lags and coarse spatial granularity. Nighttime lights (NTL) observed from satellites have repeatedly been shown to correlate with human activity, electrification, urbanization, and economic output. This project proposes a GIS-based pipeline to estimate South Africa's GDP (national and subnational) by combining nighttime light intensity with administrative boundaries and complementary covariates.
+>
+> The core idea is to learn a mapping from features derived from NTL (and optional auxiliary data) to GDP targets (e.g., annual GDP, GDP by province), producing:
 
 
+> - A reproducible geospatial ETL pipeline (ingestion → masking/cleaning → aggregation by admin unit)
+> - Exploratory analysis showing the relationship between NTL and GDP over time
+> - Baseline econometric and ML models for GDP inference (and optionally nowcasting/forecasting)
+> - Maps and dashboards that communicate spatial patterns and model outputs
 
-## Key Features
+> ***Research Questions***
+>
+> 1. To what extent can nighttime lights explain variation in South Africa's GDP across time and across provinces?
+> 2. Which NTL feature engineering choices (radiance summaries, thresholds, spatial smoothing, seasonality controls) are most predictive of GDP?
+> 3. How sensitive are estimates to known NTL confounders (gas flares, ephemeral lights, sensor differences, load shedding, aurora, fires)?
+> 4. What is the best strategy to produce robust subnational GDP estimates when ground-truth GDP is limited (temporal cross-validation, hierarchical models, transfer learning)?
+> 5. How do auxiliary covariates (population, built-up area, road density, land use, electrification proxies) improve accuracy and interpretability?
+
+## Elevator summary of the project
+>
+> - Use VIIRS/DMSP nighttime lights and GIS boundary aggregation to create province-level (and optionally district/municipality-level) features over time.
+> - Train baseline models (linear/log-linear, ridge/lasso, random forest/XGBoost; optionally sequence models) to infer GDP.
+> - Produce maps and time-series outputs to communicate economic activity patterns and uncertainty.
+> - Deliver an extensible workflow that can be adapted to other countries once validated for South Africa.
+
+# Project Checklist
+
+## 1. What are the skills necessary?
+
+#### 1.1 Correct skills
+
+> *List the skills and experience required for the project.*
+>
+> - Skills and experience with GIS, remote sensing, data analysis, and spatial/temporal feature engineering
+> - Familiarity with model evaluation and time-series / panel data methods
+
+## 2. The use case
+
+#### 2.1 Output-focused ideation
+
+> *Explain the outputs of the project and explain why this output is valuable. "Is this the end or the means?"*
+
+- <span style={{textDecoration: 'underline'}}>***Nighttime Satellite Imagery (NTL)***</span> — Primary signal used as a proxy for economic activity.
+  - Outputs: cleaned radiance rasters, annual/monthly composites, stable-light masks, and per-admin-unit aggregates.
+  - Typical derived features per province/year: sum of radiance, mean radiance, lit-area share above threshold(s), top-percentile radiance (p90/p95), inequality metrics (Gini of radiance distribution), and temporal change rates.
+
+- <span style={{textDecoration: 'underline'}}>***Administrative boundaries (GIS)***</span> — Provincial (and optionally district/municipal) polygons used to aggregate raster signals and to publish maps.
+  - Outputs: consistent boundary set, area calculations, zonal statistics tables, map layers.
+
+- <span style={{textDecoration: 'underline'}}>***Official GDP targets***</span> — Ground truth labels for supervised inference.
+  - Outputs: curated GDP table aligned by year and admin unit (e.g., GDP by province), plus metadata on revisions/definitions.
+
+- <span style={{textDecoration: 'underline'}}>***Auxiliary covariates (optional but recommended)***</span>
+  - Population grids / density (e.g., WorldPop, Meta HRSL, Kontur)
+  - Built-up / land use (e.g., Dynamic World, GHSL)
+  - Road networks and accessibility (e.g., OpenStreetMap)
+  - These covariates help separate "lights because of people" vs "lights because of industry/infrastructure", and improve model stability.
+
+#### The Output
+
+- A GIS+ML workflow that produces GDP estimates for South Africa at national and provincial levels for a selected time range (e.g., 2008–2019 if using provincial GDP labels, and extend further for national GDP).
+- A set of maps and charts showing:
+  - Spatial distribution of NTL intensity
+  - NTL-derived feature trends by province
+  - Predicted vs actual GDP and uncertainty bands
+- A baseline model that can be re-run as new NTL composites and GDP updates become available.
+
+### 2.2 Source of inspiration
+
+> *Explain what inspired this proposal. Provide any relevant details that highlight a particular challenge or opportunity this addresses.*
+>
+> - Nighttime lights have a documented relationship with economic indicators and have been used for GDP inference/nowcasting in multiple contexts.
+> - This approach can complement official statistics with higher-frequency, spatially-explicit signals that can be mapped and monitored.
+> - Example references:
+>   - [https://blogs.worldbank.org/sustainablecities/nighttime-lights-are-revolutionizing-way-we-understand-covid-19-and-our-world](https://blogs.worldbank.org/sustainablecities/nighttime-lights-are-revolutionizing-way-we-understand-covid-19-and-our-world)
+>   - *(Keep/extend literature review for NTL → GDP methods, including econometric and ML approaches.)*
+
+### 2.3 Appropriate task for ML/AI
+
+> *Explain why there is an ML/AI component needed. Provide any information that is available to substantiate the appropriateness. Include examples where relevant.*
+>
+> - The mapping from raw raster signals (plus covariates) to GDP is noisy and non-linear; ML can capture interactions and regional heterogeneity.
+> - Baselines should start simple (log-linear / panel regression), then move to ML models once data alignment and leakage checks are correct.
+> - If extending to monthly nowcasting, sequence models (or state-space approaches) may be appropriate.
+
+### 2.4 User Experience
+
+> *Explain who your users are and how they will use the solution/outputs.*
+>
+> - Researchers and analysts: reproduce GDP inference experiments and compare modeling approaches.
+> - Policymakers/think tanks: interpret spatial patterns and monitor changes across provinces.
+> - Data journalists and the public: consume maps and high-level summaries (with clear caveats).
+
+### 2.5 Ethical considerations
+
+> *Explain how the project impacts all people it could affect. Who might be harmed by the outputs of this project? Who stands to benefit?*
+>
+> - Benefits: faster, more spatially-detailed economic insights; potential to detect shocks and recovery patterns.
+> - Risks:
+>   - Misinterpretation: NTL is a proxy and can be affected by load shedding, sensor artifacts, and sector composition; outputs must include uncertainty and caveats.
+>   - Bias: areas with low electrification or different lighting technology may be underrepresented relative to real economic output.
+>   - Harm from overconfidence: avoid using outputs as sole basis for funding/policy decisions without triangulation.
+
+## 3. Reality check
+
+### 3.1 Reasonable expectations
+
+> *Explain the expectations of the output and considerations around the impact of mistakes.*
+>
+> - Expect correlation, not perfect measurement: NTL is informative but incomplete.
+> - Clearly define scope: infer GDP at national/provincial level first; only move to finer admin units if labels and validation are adequate.
+> - Quantify error and communicate uncertainty; avoid overstating precision.
+
+### 3.2 Possible in production
+
+> *Explain what kinds of technology resources are needed to get this project into production.*
+>
+> - Raster processing stack (e.g., Python + rasterio/geopandas/xarray; or Google Earth Engine for scalable ETL)
+> - Storage for rasters and intermediate products
+> - Compute: moderate CPU for zonal stats; GPU only if deep learning on imagery is pursued
+
+### 3.3 Data availability
+
+> *Explain what data is available and how it will be accessed/created.*
+>
+> - Night lights:
+>   - Monthly/annual VIIRS products: [https://eogdata.mines.edu/products/vnl/](https://eogdata.mines.edu/products/vnl/)
+> - GDP targets:
+>   - South Africa GDP data (including provincial GDP for 2008–2019 referenced in the existing spreadsheet source)
+> - Admin boundaries:
+>   - Statistics South Africa / official boundary datasets (or other authoritative boundary sources)
+> - Optional covariates:
+>   - Daytime satellite imagery (Sentinel-2 / Landsat) and land cover (Dynamic World)
+>   - Population density layers (e.g., GRID3, Meta HRSL, Kontur)
+
+### 3.4 Data volume
+
+> *Explain the volume of data and time component.*
+>
+> - NTL rasters can be large, especially at monthly cadence.
+> - Mitigation: clip to South Africa, use yearly composites for baselines, and store derived aggregates as tables.
+
+### 3.5 Required technology & compute
+
+> *Explain what processing power is needed for both R&D and production.*
+>
+> - R&D: local machine or small cloud instance for yearly composites and provincial aggregation.
+> - Scaling: cloud/GEE for repeated monthly processing or larger-area experiments.
+
+### 3.6 Skills needed
+
+> *List the skills you think will be needed to make the project a success.*
+>
+> - GIS/Remote Sensing specialist
+> - Data scientist (panel/time-series modeling)
+> - Data engineer (ETL, reproducibility)
+> - Domain reviewer for national accounts / GDP definitions
+
+### 3.7 Ground truth
+
+> *Explain what the ground truth outputs in this project are. Does it exist or still need to be created?*
+>
+> - Primary ground truth: official GDP (national + provincial where available) aligned to the same time scale as NTL features.
+> - A key task is careful alignment of definitions (nominal vs real GDP, base year, sector coverage) and revisions.
+
+### 3.8 Logging sanity
+
+> *Explain how confident you are that we can map input to output correctly.*
+>
+> - Moderate confidence once the pipeline standardizes:
+>   - consistent boundaries
+>   - consistent time windows
+>   - consistent masking for ephemeral lights and artifacts
+>   - unit conversions and inflation adjustments (if applicable)
+
+### 3.9 Logging quality
+
+> *Explain any data quality issues you foresee.*
+>
+> - NTL issues: cloud cover artifacts (depending on product), stray light, background noise, blooming, sensor changes.
+> - South Africa-specific confounder to account for: load shedding and policy/technology shifts in lighting.
+
+### 3.10 Indifference curves
+
+> *List mistakes that could be in the eventual outputs and indicate how 'bad' the errors are relative to one another.*
+>
+> - Worst: systematic bias that misranks provinces persistently (misleading for spatial comparisons).
+> - Next: overfitting to a short time window (looks great in-sample, fails out-of-sample).
+> - Less severe: noisy year-to-year variation that can be smoothed or constrained.
+
+## 4. Performance metrics
+
+### 4.1 Simulation
+
+> *Explain if the project would benefit from any form of simulation.*
+>
+> - Optional: synthetic experiments to test robustness to missing lights, thresholding choices, and temporal lags.
+
+### 4.2 Metric creation
+
+> *Explain what your performance metric is.*
+>
+> - Core metrics (depending on target): RMSE/MAE on GDP (often on log-GDP), MAPE (with care), and rank-correlation across provinces.
+> - Use time-based splits (train on earlier years, test on later years) to avoid leakage.
+
+### 4.3 Metric review
+
+> *Explain how the performance metric has been reviewed to ensure it can't be misinterpreted/abused/gamed.*
+>
+> - Report multiple metrics and include baselines (e.g., "predict last year's GDP").
+> - Always publish uncertainty and residual diagnostics by province.
+
+### 4.4 Metric-loss comparison
+
+> *Explain how the performance metric correlates with a standard loss function.*
+>
+> - If modeling log-GDP, MSE on log targets aligns with RMSE in log-space and stabilizes variance.
+> - Consider robust losses (Huber) if outliers exist.
+
+### 4.5 Population
+
+> *Explain the statistical population of interest and detail any specific exclusions.*
+>
+> - Focus: South Africa overall and provinces.
+> - Exclusions/controls: mask gas flares and ephemeral events if present; consider excluding saturated pixels depending on product.
+
+## 5. Testing criteria to overcome human biases
+
+### 5.1 Minimum performance
+
+> *Explain minimum acceptance criteria.*
+>
+> - Must beat a simple baseline (e.g., lag-1 GDP) on a time-based test split.
+> - Must show stable performance across provinces (no persistent extreme residuals without explanation).
+
+## 6. Value creation
+
+### 6.1 Value drivers
+
+> *What benefit is gained by investing effort into this idea?*
+>
+> - Faster and spatially-explicit economic measurement and monitoring.
+> - A reusable geospatial methodology that can be extended to other countries and other macro indicators.
 
 
-## Technologies Used
+# Additional Notes
+
+- Decide early whether the main deliverable is (a) provincial GDP inference (most defensible given labels) or (b) higher-resolution GDP mapping (harder to validate).
+- Explicitly document how load shedding and lighting technology changes will be treated (covariate, normalization, or robustness checks).
+- Keep a clear separation between:
+  - ETL (reproducible GIS processing)
+  - Modeling (baselines → ML)
+  - Communication (maps, uncertainty, caveats)
+- Candidate auxiliary datasets for South Africa:
+  - Population density: GRID3, Meta HRSL, Kontur
+  - Built-up / land use: Dynamic World / GHSL
+  - Roads/POIs: OpenStreetMap
+# GDP Prediction Using Nighttime Satellite Imagery
+
+## Project Overview
+
+This project investigates whether **nighttime satellite light intensity** can be used as a proxy signal for **economic activity and GDP prediction** in South Africa. The notebook builds a full exploratory workflow: it connects to cloud-hosted geospatial data, extracts provincial nighttime-light intensity from raster imagery, merges those features with macroeconomic indicators, and compares several regression models.
+
+At a high level, the project follows a well-established research idea: artificial light observed at night is often correlated with population concentration, electrification, infrastructure intensity, and production activity. Prior work has shown that nighttime lights can help estimate economic activity where conventional statistics are sparse or delayed, which makes this a sensible starting point for GDP modelling.
+
+## Research Motivation and Rationale
+
+The modelling choices in this notebook align with literature from remote sensing, development economics, and applied machine learning:
+
+* **Nighttime lights as an economic proxy.** Henderson, Storeygard, and Weil (2012) showed that satellite-observed light can help measure economic growth, especially where official accounts are noisy or incomplete. Chen and Nordhaus (2011) similarly demonstrated that luminosity can proxy economic statistics across countries.
+* **Remote sensing for development estimation.** Jean et al. (2016) showed that satellite imagery combined with machine learning can recover development-relevant signals such as poverty, reinforcing the idea that geospatial imagery can encode socioeconomic structure.
+* **Regularized linear models.** Ridge regression and Lasso are appropriate baselines when the number of predictors is modest but collinearity is likely. Provincial nighttime-light series are highly correlated across space and time, so shrinkage is a reasonable first response.
+* **Tree ensembles and boosting.** Random forests and XGBoost are strong non-linear baselines when relationships may be thresholded or interaction-heavy. They are useful when the effect of light intensity on GDP is not strictly linear.
+* **Explainable boosting.** Explainable Boosting Machines (EBMs) are a good compromise when you want stronger predictive performance than a simple linear model but better interpretability than a black-box ensemble.
+* **Dimensionality reduction.** Principal Component Analysis (PCA) is a reasonable preprocessing step for the World Bank indicator matrix because the notebook uses hundreds of macro indicators over a relatively small number of annual observations.
+
+## Core Questions
+
+1. Can provincial nighttime-light intensity alone explain variation in South Africa's GDP?
+2. Do non-linear models outperform regularized linear baselines on the extracted light features?
+3. Does adding broad macroeconomic indicators improve predictive accuracy beyond nighttime lights alone?
+4. What are the trade-offs between accuracy and interpretability in this setting?
+
+## Data Assets Used in the Notebook
+
+The notebook accesses three main data groups from an S3 bucket:
+
+* **Nighttime satellite rasters** stored under Nightlight_Satellite_Images_GDP
+* **OpenStreetMap administrative boundaries** stored under OSM
+* **World Bank indicators** stored under WorldBank/SA_Indicators.csv
+
+Within the workflow, the South Africa geometry is read from an OSM .pbf extract using pyogrio, then dissolved into a national mask for raster cropping. Provincial boundaries are also retained so the notebook can aggregate nighttime-light values by province. A World Bank indicator table is loaded for the years 1992-2022 and used both for GDP labels and for broader macroeconomic feature engineering.
+
+## End-to-End Workflow
+
+### 1. Environment setup
+
+The notebook installs geospatial and cloud I/O dependencies including pyogrio, boto3, s3fs, rasterio[s3], earthpy, xgboost, interpret, and streamlit.
+
+### 2. Cloud data access
+
+The notebook authenticates to AWS, mounts an S3-backed file system with s3fs, and points to folders containing OSM boundaries, nighttime rasters, and World Bank indicators.
+
+### 3. Boundary extraction
+
+An OpenStreetMap extract for South Africa is downloaded locally, then administrative polygons are read from the multipolygons layer with admin_level = '4'. Those boundaries are used both as a country mask and as province-level aggregation units.
+
+### 4. Raster preprocessing
+
+Each nighttime raster is clipped to South Africa using rasterio.mask.mask. The clipped raster is thresholded with np.where(raster > 7, raster, 0) to suppress very low-intensity values, then written back as a trimmed GeoTIFF.
+
+### 5. Feature construction
+
+For each trimmed raster year, the notebook sums nighttime-light values inside every province and builds a province-by-year feature table. That table becomes the main design matrix for the nighttime-lights-only models.
+
+### 6. GDP target alignment
+
+The notebook loads World Bank indicators from SA_Indicators.csv, transposes the data into a year-indexed table, and uses GDP (current US$) as the response variable.
+
+### 7. Model experiments
+
+The project compares:
+
+* Ridge regression
+* Lasso regression
+* Random forest regression
+* XGBoost regression
+* Explainable Boosting Machine regression
+* Random forest on PCA-compressed World Bank indicators
+* Ridge, random forest, and voting regressor on the merged nighttime-lights + World Bank dataset
+
+### 8. Lightweight deployment stub
+
+The notebook ends by writing a minimal streamlit.py file, suggesting an eventual path toward interactive presentation or deployment.
+
+## Why These Steps Make Sense
+
+### Nighttime-light extraction by province
+
+Aggregating raster intensity over provinces is a defensible way to convert imagery into tabular features for GDP modelling. This reduces very large raster data into economically interpretable administrative units, which matches how regional GDP is commonly reported.
+
+### Thresholding low-intensity values
+
+The line np.where(raster > 7, raster, 0) appears to be a denoising step. That is sensible because low digital-number values in nighttime-light products can capture background noise, dim ephemeral signals, or non-economic illumination. The exact threshold should ideally be validated, but the intuition is consistent with remote-sensing preprocessing practice.
+
+### Linear and non-linear model comparison
+
+Using both regularized linear models and tree/boosting models is a strong experimental design choice. Linear models test whether the signal is mostly additive and smooth; ensemble methods test whether the relationship contains interactions, saturation effects, or province-specific non-linearities.
+
+### PCA for macro indicators
+
+The World Bank matrix has 342 indicators with roughly 31 yearly observations after transposition. PCA is therefore a pragmatic way to compress redundant macro indicators before fitting a model and helps reduce instability from a high-feature, low-sample regime.
+
+## Observed Results from the Notebook
+
+The notebook outputs the following reported metrics:
+
+<div style={{ overflowX: "auto", width: "100%", margin: "40px 0" }}>
+  <table style={{ minWidth: "800px", width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+    <thead>
+      <tr style={{ borderBottom: "2px solid var(--neutral-alpha-medium)" }}>
+        <th style={{ padding: "16px 24px", fontWeight: "600", color: "var(--neutral-strong)" }}>Experiment</th>
+        <th style={{ padding: "16px 24px", fontWeight: "600", color: "var(--neutral-strong)" }}>Feature Set</th>
+        <th style={{ padding: "16px 24px", fontWeight: "600", color: "var(--neutral-strong)" }}>Key Metrics Reported</th>
+        <th style={{ padding: "16px 24px", fontWeight: "600", color: "var(--neutral-strong)" }}>Interpretation</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style={{ borderBottom: "1px solid var(--neutral-alpha-weak)" }}>
+        <td style={{ padding: "16px 24px" }}><strong>Ridge Regression</strong></td>
+        <td style={{ padding: "16px 24px" }}>Provincial nighttime lights</td>
+        <td style={{ padding: "16px 24px" }}>R² = 0.6429, MSE = 3.84 × 10²¹</td>
+        <td style={{ padding: "16px 24px" }}>A solid linear baseline; suggests nighttime lights contain meaningful GDP signal.</td>
+      </tr>
+      <tr style={{ borderBottom: "1px solid var(--neutral-alpha-weak)" }}>
+        <td style={{ padding: "16px 24px" }}><strong>Lasso Regression</strong></td>
+        <td style={{ padding: "16px 24px" }}>Provincial nighttime lights</td>
+        <td style={{ padding: "16px 24px" }}>R² = 0.6966, MSE = 3.26 × 10²¹</td>
+        <td style={{ padding: "16px 24px" }}>Slightly better than Ridge, indicating sparse structure.</td>
+      </tr>
+      <tr style={{ borderBottom: "1px solid var(--neutral-alpha-weak)" }}>
+        <td style={{ padding: "16px 24px" }}><strong>Random Forest</strong></td>
+        <td style={{ padding: "16px 24px" }}>Provincial nighttime lights</td>
+        <td style={{ padding: "16px 24px" }}>R² = −0.5193, MAE = 2.15 × 10¹⁰</td>
+        <td style={{ padding: "16px 24px" }}>Mixed result; negative R² signals unstable generalization.</td>
+      </tr>
+      <tr style={{ borderBottom: "1px solid var(--neutral-alpha-weak)" }}>
+        <td style={{ padding: "16px 24px" }}><strong>XGBoost</strong></td>
+        <td style={{ padding: "16px 24px" }}>Provincial nighttime lights</td>
+        <td style={{ padding: "16px 24px" }}>R² = 0.7480, MSE = 2.71 × 10²¹</td>
+        <td style={{ padding: "16px 24px" }}>Stronger non-linear performance than linear models.</td>
+      </tr>
+      <tr style={{ borderBottom: "1px solid var(--neutral-alpha-weak)" }}>
+        <td style={{ padding: "16px 24px" }}><strong>EBM</strong></td>
+        <td style={{ padding: "16px 24px" }}>Provincial nighttime lights</td>
+        <td style={{ padding: "16px 24px" }}>R² = 0.8222, MSE = 1.91 × 10²¹</td>
+        <td style={{ padding: "16px 24px" }}>Best lights-only score with interpretability advantages.</td>
+      </tr>
+      <tr style={{ borderBottom: "1px solid var(--neutral-alpha-weak)" }}>
+        <td style={{ padding: "16px 24px" }}><strong>RF + PCA</strong></td>
+        <td style={{ padding: "16px 24px" }}>World Bank indicators</td>
+        <td style={{ padding: "16px 24px" }}>R² = 0.7130, MSE = 2.63 × 10²¹</td>
+        <td style={{ padding: "16px 24px" }}>Macro indicators are predictive but not superior to lights.</td>
+      </tr>
+      <tr style={{ borderBottom: "1px solid var(--neutral-alpha-weak)" }}>
+        <td style={{ padding: "16px 24px" }}><strong>Ridge (Merged)</strong></td>
+        <td style={{ padding: "16px 24px" }}>Lights + World Bank</td>
+        <td style={{ padding: "16px 24px" }}>R² = 0.9925</td>
+        <td style={{ padding: "16px 24px" }}>Very high fit; likely optimistic/overfit.</td>
+      </tr>
+      <tr style={{ borderBottom: "1px solid var(--neutral-alpha-weak)" }}>
+        <td style={{ padding: "16px 24px" }}><strong>RF (Merged)</strong></td>
+        <td style={{ padding: "16px 24px" }}>Lights + World Bank</td>
+        <td style={{ padding: "16px 24px" }}>R² = 0.9797</td>
+        <td style={{ padding: "16px 24px" }}>Strong performance, again with overfitting risk.</td>
+      </tr>
+      <tr>
+        <td style={{ padding: "16px 24px" }}><strong>Voting Regressor</strong></td>
+        <td style={{ padding: "16px 24px" }}>Lights + World Bank</td>
+        <td style={{ padding: "16px 24px" }}>R² = 0.9979, MSE = 2.26 × 10¹⁹</td>
+        <td style={{ padding: "16px 24px" }}>Best reported fit; requires stronger validation.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+## Interpretation of Results
+
+Several patterns stand out:
+
+* **Nighttime lights are informative.** Even the simpler ridge and lasso baselines explain a substantial share of GDP variation.
+* **Non-linear models help.** XGBoost and EBM outperform the linear baselines on the nighttime-light-only feature set, suggesting that the mapping from regional light intensity to GDP is not purely linear.
+* **Merged features dominate.** Combining nighttime lights with macro indicators produces extremely high R^2 values, which probably means the merged dataset contains strong predictive information, but also that the evaluation may be too optimistic for such a small annual sample.
+* **Interpretability matters.** The EBM result is especially interesting because it offers strong performance without giving up inspectability to the same degree as XGBoost.
+
+## Suggested Repository Structure
+
+Because the current work is notebook-heavy, a cleaner production-ready structure would look like this:
+
+project/
+|- README.md
+|- notebooks/
+|  |- GDP_Prediction_Using_Nighttime_Satellite_Imagery.ipynb
+|- src/
+|  |- data_access.py
+|  |- preprocessing.py
+|  |- features.py
+|  |- train.py
+|  |- evaluate.py
+|- app/
+|  |- streamlit.py
+|- requirements.txt
+|- .env.example
 
 
-## Challenges and Learnings
+## Reproducibility Notes
 
+To rerun this project safely:
 
+1. Install the Python packages used in the notebook.
+2. Configure AWS credentials outside the notebook.
+3. Ensure the S3 bucket paths still exist and are accessible.
+4. Re-run raster trimming before the modelling cells if the SA_trimmed outputs are not already present.
+5. Rebuild df_ntls, reload the indicator dataset, and then rerun the modelling experiments.
 
-## Outcome
+## Paper References
 
+These are the main papers supporting the project's rationale and modelling choices:
+
+1. Henderson, J. V., Storeygard, A., & Weil, D. N. (2012). *Measuring Economic Growth from Outer Space*. American Economic Review, 102(2), 994-1028. [https://doi.org/10.1257/aer.102.2.994](https://doi.org/10.1257/aer.102.2.994)
+2. Chen, X., & Nordhaus, W. D. (2011). *Using luminosity data as a proxy for economic statistics*. Proceedings of the National Academy of Sciences, 108(21), 8589-8594. [https://doi.org/10.1073/pnas.1017031108](https://doi.org/10.1073/pnas.1017031108)
+3. Jean, N., Burke, M., Xie, M., Davis, W. M., Lobell, D. B., & Ermon, S. (2016). *Combining satellite imagery and machine learning to predict poverty*. Science, 353(6301), 790-794. [https://doi.org/10.1126/science.aaf7894](https://doi.org/10.1126/science.aaf7894)
+4. Hoerl, A. E., & Kennard, R. W. (1970). *Ridge Regression: Biased Estimation for Nonorthogonal Problems*. Technometrics, 12(1), 55-67. [https://doi.org/10.1080/00401706.1970.10488634](https://doi.org/10.1080/00401706.1970.10488634)
+5. Tibshirani, R. (1996). *Regression Shrinkage and Selection via the Lasso*. Journal of the Royal Statistical Society: Series B, 58(1), 267-288. [https://doi.org/10.1111/j.2517-6161.1996.tb02080.x](https://doi.org/10.1111/j.2517-6161.1996.tb02080.x)
+6. Breiman, L. (2001). *Random Forests*. Machine Learning, 45, 5-32. [https://doi.org/10.1023/A:1010933404324](https://doi.org/10.1023/A:1010933404324)
+7. Chen, T., & Guestrin, C. (2016). *XGBoost: A Scalable Tree Boosting System*. Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining, 785-794. [https://doi.org/10.1145/2939672.2939785](https://doi.org/10.1145/2939672.2939785)
+8. Lou, Y., Caruana, R., Gehrke, J., & Hooker, G. (2013). *Accurate Intelligible Models with Pairwise Interactions*. Proceedings of the 19th ACM SIGKDD International Conference on Knowledge Discovery and Data Mining, 623-631. [https://doi.org/10.1145/2487575.2487579](https://doi.org/10.1145/2487575.2487579)
+9. Pearson, K. (1901). *On Lines and Planes of Closest Fit to Systems of Points in Space*. Philosophical Magazine, 2(11), 559-572. [https://doi.org/10.1080/14786440109462720](https://doi.org/10.1080/14786440109462720)
+
+  
