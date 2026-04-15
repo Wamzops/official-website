@@ -78,7 +78,7 @@ function getMDXData(dir: string) {
 }
 
 export function getPosts(customPath = ["", "", "", ""]) {
-  const postsDir = path.join(process.cwd(), ...customPath);
+  const postsDir = path.join(/* turbopackIgnore: true */ process.cwd(), ...customPath);
   return getMDXData(postsDir);
 }
 
@@ -198,7 +198,7 @@ type ProjectFolder = {
  * Returns an array of ProjectFolder objects.
  */
 export function getProjectFolders(basePath: string[]) {
-  const baseDir = path.join(process.cwd(), ...basePath);
+  const baseDir = path.join(/* turbopackIgnore: true */ process.cwd(), ...basePath);
 
   if (!fs.existsSync(baseDir)) {
     console.warn(`Base dir not found: ${baseDir}`);
