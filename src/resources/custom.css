@@ -48,18 +48,14 @@ html, body {
   flex-wrap: wrap;
 }
 
-/* Filter chips row: scroll horizontally on small screens */
+/* Filter chips row: wrap to new lines when they don't fit */
 .modern-filter-bar {
   display: flex;
-  flex-wrap: nowrap;        /* chips stay on one line … */
+  flex-wrap: wrap;          /* chips wrap to next row */
   gap: 0.5rem;
-  overflow-x: auto;        /* … and scroll if needed    */
   padding-bottom: 4px;
-  /* hide scrollbar visually but keep it functional */
-  scrollbar-width: none;
-  -ms-overflow-style: none;
   flex: 1;
-  min-width: 0;            /* critical: prevents flex overflow */
+  min-width: 0;            /* prevents flex overflow */
 }
 
 .modern-filter-bar::-webkit-scrollbar {
