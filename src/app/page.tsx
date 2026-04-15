@@ -162,47 +162,6 @@ export default function Home() {
         </Column>
       )}
 
-      {routes["/work"] && (
-        <Column fillWidth gap="24" marginBottom="l">
-          <Row fillWidth paddingRight="64">
-            <Line maxWidth={48} />
-          </Row>
-
-          <Row fillWidth gap="24" marginTop="40" s={{ direction: "column" }}>
-            <Row flex={1} paddingLeft="l" paddingTop="24">
-              <Heading as="h2" variant="display-strong-xs" wrap="balance">
-                Latest projects
-              </Heading>
-            </Row>
-
-            <Column flex={3} paddingX="20" gap="16" horizontal="center">
-              <Projects range={[1, 1]} />
-              <RevealFx translateY="8" delay={0.2} fillWidth horizontal="end">
-                <Badge
-                  href="/work"
-                  id="badge-work"
-                  title="View more projects"
-                  textVariant="label-default-s"
-                />
-              </RevealFx>
-            </Column>
-          </Row>
-          <Row fillWidth paddingLeft="64" horizontal="end">
-            <Line maxWidth={48} />
-          </Row>
-        </Column>
-      )}
-
-      {/*
-      Section to add the projects in a grid
-
-*/}
-
-      {/*
-      <Projects range={[2]} />
-
-*/}
-      <Mailchimp />
     </Column>
   );
 }

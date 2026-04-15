@@ -18,10 +18,10 @@ const baseURL: string = "https://demo.magic-portfolio.com";
 
 const routes: RoutesConfig = {
   "/": true,
-  "/about": true,
   "/work": true,
   "/blog": true,
   "/musings": true,
+  "/about": true,
 };
 
 const display: DisplayConfig = {
