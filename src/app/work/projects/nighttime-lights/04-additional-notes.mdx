@@ -1,0 +1,56 @@
+---
+title: "Additional Notes"
+order: 4
+---
+
+## Key Decisions
+
+- Decide early whether the main deliverable is **(a) provincial GDP inference** (most defensible given labels) or **(b) higher-resolution GDP mapping** (harder to validate).
+- Explicitly document how load shedding and lighting technology changes will be treated (covariate, normalization, or robustness checks).
+- Keep a clear separation between:
+  - **ETL** — reproducible GIS processing
+  - **Modeling** — baselines → ML
+  - **Communication** — maps, uncertainty, caveats
+
+## Candidate Auxiliary Datasets for South Africa
+
+- **Population density:** GRID3, Meta HRSL, Kontur
+- **Built-up / land use:** Dynamic World / GHSL
+- **Roads/POIs:** OpenStreetMap
+
+## Suggested Repository Structure
+
+```
+project/
+|- README.md
+|- notebooks/
+|  |- GDP_Prediction_Using_Nighttime_Satellite_Imagery.ipynb
+|- src/
+|  |- data_access.py
+|  |- preprocessing.py
+|  |- features.py
+|  |- train.py
+|  |- evaluate.py
+|- app/
+|  |- streamlit.py
+|- requirements.txt
+|- .env.example
+```
+
+## Reproducibility Notes
+
+To rerun this project safely:
+
+1. Install the Python packages used in the notebook.
+2. Configure AWS credentials outside the notebook.
+3. Ensure the S3 bucket paths still exist and are accessible.
+4. Re-run raster trimming before the modelling cells if the `SA_trimmed` outputs are not already present.
+5. Rebuild `df_ntls`, reload the indicator dataset, and then rerun the modelling experiments.
+
+## Paper References
+
+1. Henderson, J. V., Storeygard, A., & Weil, D. N. (2012). *Measuring Economic Growth from Outer Space*. American Economic Review, 102(2), 994-1028.
+2. Chen, X., & Nordhaus, W. D. (2011). *Using luminosity data as a proxy for economic statistics*. Proceedings of the National Academy of Sciences, 108(21), 8589-8594.
+3. Jean, N., Burke, M., et al. (2016). *Combining satellite imagery and machine learning to predict poverty*. Science, 353(6301), 790-794.
+4. Breiman, L. (2001). *Random Forests*. Machine Learning, 45, 5-32.
+5. Chen, T., & Guestrin, C. (2016). *XGBoost: A Scalable Tree Boosting System*. KDD 2016, 785-794.

@@ -169,7 +169,7 @@ const about: About = {
       {
         name: "Kenyatta University",
         description: (
-          <Column gap="8" paddingBottom = "20">
+          <Column gap="8" paddingBottom="20">
             <Column gap="4">
               <Text onBackground="neutral-strong">
                 Bachelor of Science in Biomedical Engineering
@@ -192,7 +192,7 @@ const about: About = {
           </Column>
         ),
       },
-    
+
       {
         name: "ExploreAI Academy",
         description: (
@@ -354,7 +354,6 @@ const work: Work = {
   label: "Work",
   title: `Projects – ${person.name}`,
   description: `Design and dev projects by ${person.name}`,
-
 };
 
 const musings: Musings = {

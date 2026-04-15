@@ -1,4 +1,4 @@
-import { getPosts } from "@/utils/utils";
+import { getProjectFolders } from "@/utils/utils";
 import { Grid } from "@once-ui-system/core";
 import Musing from "./Musing";
 
@@ -17,7 +17,7 @@ export function Musings({
   exclude = [],
   direction,
 }: MusingsProps) {
-  let allMusings = getPosts(["src", "app", "musings", "musings"]);
+  let allMusings = getProjectFolders(["src", "app", "musings", "musings"]);
 
   // Exclude by slug (exact match)
   if (exclude.length) {

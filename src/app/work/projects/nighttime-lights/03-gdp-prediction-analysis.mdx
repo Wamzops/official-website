@@ -1,0 +1,115 @@
+---
+title: "GDP Prediction — Analysis"
+order: 3
+---
+
+## Project Overview
+
+This section covers the actual notebook analysis investigating whether **nighttime satellite light intensity** can be used as a proxy signal for **economic activity and GDP prediction** in South Africa.
+
+At a high level, the project follows a well-established research idea: artificial light observed at night is often correlated with population concentration, electrification, infrastructure intensity, and production activity.
+
+## Research Motivation
+
+The modelling choices align with literature from remote sensing, development economics, and applied machine learning:
+
+- **Nighttime lights as an economic proxy.** Henderson, Storeygard, and Weil (2012) showed that satellite-observed light can help measure economic growth, especially where official accounts are noisy or incomplete.
+- **Regularized linear models.** Ridge regression and Lasso are appropriate baselines when the number of predictors is modest but collinearity is likely.
+- **Tree ensembles and boosting.** Random forests and XGBoost are strong non-linear baselines when relationships may be thresholded or interaction-heavy.
+- **Explainable boosting.** Explainable Boosting Machines (EBMs) offer stronger predictive performance than simple linear models with better interpretability than black-box ensembles.
+- **Dimensionality reduction.** PCA is a reasonable preprocessing step for the World Bank indicator matrix.
+
+## Core Questions
+
+1. Can provincial nighttime-light intensity alone explain variation in South Africa's GDP?
+2. Do non-linear models outperform regularized linear baselines on the extracted light features?
+3. Does adding broad macroeconomic indicators improve predictive accuracy beyond nighttime lights alone?
+4. What are the trade-offs between accuracy and interpretability in this setting?
+
+## Data Assets
+
+The notebook accesses three main data groups:
+
+- **Nighttime satellite rasters** stored under `Nightlight_Satellite_Images_GDP`
+- **OpenStreetMap administrative boundaries** stored under `OSM`
+- **World Bank indicators** stored under `WorldBank/SA_Indicators.csv`
+
+## End-to-End Workflow
+
+### 1. Environment setup
+
+The notebook installs geospatial and cloud I/O dependencies including pyogrio, boto3, s3fs, rasterio[s3], earthpy, xgboost, interpret, and streamlit.
+
+### 2. Cloud data access
+
+The notebook authenticates to AWS, mounts an S3-backed file system with s3fs, and points to folders containing OSM boundaries, nighttime rasters, and World Bank indicators.
+
+### 3. Boundary extraction
+
+An OpenStreetMap extract for South Africa is downloaded locally, then administrative polygons are read from the multipolygons layer.
+
+### 4. Raster preprocessing
+
+Each nighttime raster is clipped to South Africa using `rasterio.mask.mask`. The clipped raster is thresholded with `np.where(raster > 7, raster, 0)` to suppress very low-intensity values.
+
+### 5. Feature construction
+
+For each trimmed raster year, the notebook sums nighttime-light values inside every province and builds a province-by-year feature table.
+
+### 6. Model experiments
+
+The project compares Ridge, Lasso, Random Forest, XGBoost, EBM, RF + PCA on World Bank indicators, and combined models using merged nighttime-lights + World Bank datasets.
+
+## Observed Results
+
+<div style={{ overflowX: "auto", width: "100%", margin: "40px 0" }}>
+  <table style={{ minWidth: "800px", width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+    <thead>
+      <tr style={{ borderBottom: "2px solid var(--neutral-alpha-medium)" }}>
+        <th style={{ padding: "16px 24px", fontWeight: "600" }}>Experiment</th>
+        <th style={{ padding: "16px 24px", fontWeight: "600" }}>Feature Set</th>
+        <th style={{ padding: "16px 24px", fontWeight: "600" }}>Key Metrics</th>
+        <th style={{ padding: "16px 24px", fontWeight: "600" }}>Interpretation</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style={{ borderBottom: "1px solid var(--neutral-alpha-weak)" }}>
+        <td style={{ padding: "16px 24px" }}><strong>Ridge Regression</strong></td>
+        <td style={{ padding: "16px 24px" }}>Provincial nighttime lights</td>
+        <td style={{ padding: "16px 24px" }}>R² = 0.6429</td>
+        <td style={{ padding: "16px 24px" }}>A solid linear baseline; nighttime lights contain meaningful GDP signal.</td>
+      </tr>
+      <tr style={{ borderBottom: "1px solid var(--neutral-alpha-weak)" }}>
+        <td style={{ padding: "16px 24px" }}><strong>Lasso Regression</strong></td>
+        <td style={{ padding: "16px 24px" }}>Provincial nighttime lights</td>
+        <td style={{ padding: "16px 24px" }}>R² = 0.6966</td>
+        <td style={{ padding: "16px 24px" }}>Slightly better than Ridge, indicating sparse structure.</td>
+      </tr>
+      <tr style={{ borderBottom: "1px solid var(--neutral-alpha-weak)" }}>
+        <td style={{ padding: "16px 24px" }}><strong>XGBoost</strong></td>
+        <td style={{ padding: "16px 24px" }}>Provincial nighttime lights</td>
+        <td style={{ padding: "16px 24px" }}>R² = 0.7480</td>
+        <td style={{ padding: "16px 24px" }}>Stronger non-linear performance than linear models.</td>
+      </tr>
+      <tr style={{ borderBottom: "1px solid var(--neutral-alpha-weak)" }}>
+        <td style={{ padding: "16px 24px" }}><strong>EBM</strong></td>
+        <td style={{ padding: "16px 24px" }}>Provincial nighttime lights</td>
+        <td style={{ padding: "16px 24px" }}>R² = 0.8222</td>
+        <td style={{ padding: "16px 24px" }}>Best lights-only score with interpretability advantages.</td>
+      </tr>
+      <tr>
+        <td style={{ padding: "16px 24px" }}><strong>Voting Regressor</strong></td>
+        <td style={{ padding: "16px 24px" }}>Lights + World Bank</td>
+        <td style={{ padding: "16px 24px" }}>R² = 0.9979</td>
+        <td style={{ padding: "16px 24px" }}>Best reported fit; requires stronger validation against overfitting.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+## Key Takeaways
+
+- **Nighttime lights are informative.** Even the simpler ridge and lasso baselines explain a substantial share of GDP variation.
+- **Non-linear models help.** XGBoost and EBM outperform linear baselines, suggesting the mapping from light intensity to GDP is not purely linear.
+- **Merged features dominate.** Combining nighttime lights with macro indicators produces very high R² values — though evaluation may be optimistic given the small annual sample.
+- **Interpretability matters.** The EBM result is especially interesting because it offers strong performance without sacrificing inspectability.

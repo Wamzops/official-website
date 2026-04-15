@@ -1,0 +1,58 @@
+---
+title: "Project Checklist"
+order: 2
+---
+
+## 1. What are the skills necessary?
+
+- Skills and experience with GIS, remote sensing, data analysis, and spatial/temporal feature engineering
+- Familiarity with model evaluation and time-series / panel data methods
+
+## 2. The use case
+
+**Nighttime Satellite Imagery (NTL)** — Primary signal used as a proxy for economic activity.
+- Outputs: cleaned radiance rasters, annual/monthly composites, stable-light masks, and per-admin-unit aggregates.
+- Typical derived features per province/year: sum of radiance, mean radiance, lit-area share above threshold(s), top-percentile radiance (p90/p95), inequality metrics (Gini of radiance distribution), and temporal change rates.
+
+**Administrative boundaries (GIS)** — Provincial and optionally district/municipal polygons used to aggregate raster signals and to publish maps.
+
+**Official GDP targets** — Ground truth labels for supervised inference. Curated GDP table aligned by year and admin unit (e.g., GDP by province), plus metadata on revisions/definitions.
+
+**Auxiliary covariates (optional but recommended)**
+- Population grids / density (e.g., WorldPop, Meta HRSL, Kontur)
+- Built-up / land use (e.g., Dynamic World, GHSL)
+- Road networks and accessibility (e.g., OpenStreetMap)
+- These covariates help separate "lights because of people" vs "lights because of industry/infrastructure", and improve model stability.
+
+## 3. Reality check
+
+**Reasonable expectations**
+- Expect correlation, not perfect measurement: NTL is informative but incomplete.
+- Clearly define scope: infer GDP at national/provincial level first; only move to finer admin units if labels and validation are adequate.
+- Quantify error and communicate uncertainty; avoid overstating precision.
+
+**Data availability**
+- Night lights: Monthly/annual VIIRS products from [eogdata.mines.edu](https://eogdata.mines.edu/products/vnl/)
+- GDP targets: South Africa GDP data (including provincial GDP for 2008–2019)
+- Admin boundaries: Statistics South Africa / official boundary datasets
+- Optional covariates: Daytime satellite imagery, population density layers
+
+## 4. Performance metrics
+
+**Metric creation**
+- Core metrics: RMSE/MAE on GDP (often on log-GDP), MAPE (with care), and rank-correlation across provinces.
+- Use time-based splits (train on earlier years, test on later years) to avoid leakage.
+
+**Metric review**
+- Report multiple metrics and include baselines (e.g., "predict last year's GDP").
+- Always publish uncertainty and residual diagnostics by province.
+
+## 5. Testing & validation criteria
+
+Must beat a simple baseline (e.g., lag-1 GDP) on a time-based test split.
+Must show stable performance across provinces (no persistent extreme residuals without explanation).
+
+## 6. Value creation
+
+- Faster and spatially-explicit economic measurement and monitoring.
+- A reusable geospatial methodology that can be extended to other countries and other macro indicators.

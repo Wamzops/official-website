@@ -1,7 +1,8 @@
-import { Mailchimp } from "@/components";
-import { Posts } from "@/components/blog/Posts";
-import { baseURL, blog, newsletter, person } from "@/resources";
-import { Column, Heading, Meta, Schema } from "@once-ui-system/core";
+import { ContentLayout } from "@/components/ContentLayout";
+import { baseURL, blog, person } from "@/resources";
+import { Meta, Schema } from "@once-ui-system/core";
+import { getProjectFolders, getFolderSidebarPosts } from "@/utils/utils";
+import { LibraryClient } from "@/components/LibraryClient";
 
 export async function generateMetadata() {
   return Meta.generate({
@@ -13,9 +14,29 @@ export async function generateMetadata() {
   });
 }
 
+const tagToColor: Record<string, string> = {
+  Design: "dot-purple",
+  "Open-Source": "dot-green",
+  Product: "dot-yellow",
+  Personal: "dot-teal",
+  Engineering: "dot-blue",
+  Analytics: "dot-green",
+};
+
+const filterCategories = [
+  { label: "Engineering", dot: "dot-blue" },
+  { label: "Product", dot: "dot-yellow" },
+  { label: "Design", dot: "dot-purple" },
+  { label: "Analytics", dot: "dot-green" },
+  { label: "Personal", dot: "dot-teal" },
+];
+
 export default function Blog() {
+  const posts = getProjectFolders(["src", "app", "blog", "posts"]);
+  const sidebarPosts = getFolderSidebarPosts(posts);
+
   return (
-    <Column maxWidth="m" paddingTop="24">
+    <ContentLayout posts={sidebarPosts} category="blog">
       <Schema
         as="blogPosting"
         baseURL={baseURL}
@@ -29,18 +50,27 @@ export default function Blog() {
           image: `${baseURL}${person.avatar}`,
         }}
       />
-      <Heading marginBottom="l" variant="heading-strong-xl" marginLeft="24">
-        {blog.title}
-      </Heading>
-      <Column fillWidth flex={1} gap="40">
-        <Posts range={[1, 1]} thumbnail />
-        <Posts range={[2, 3]} columns="2" thumbnail direction="column" />
-        <Mailchimp marginBottom="l" />
-        <Heading as="h2" variant="heading-strong-xl" marginLeft="l">
-          Earlier posts
-        </Heading>
-        <Posts range={[4]} columns="2" />
-      </Column>
-    </Column>
+
+      <div style={{ paddingBottom: "4rem" }}>
+        {/* Modern Header */}
+        <div style={{ marginBottom: "3rem" }}>
+          <h1 style={{ fontSize: "2.5rem", fontWeight: 800, marginBottom: "0.5rem" }}>{blog.title}</h1>
+          <p style={{ fontSize: "1.125rem", color: "var(--doc-secondary)", maxWidth: "600px" }}>
+            {blog.description}
+          </p>
+        </div>
+
+        {/* Interactive Library Client */}
+        <LibraryClient
+          initialPosts={posts}
+          categories={filterCategories}
+          tagToColor={tagToColor}
+          type="blog"
+          baseHref="/blog"
+          searchPlaceholder="Search blog posts..."
+        />
+      </div>
+    </ContentLayout>
   );
 }
+

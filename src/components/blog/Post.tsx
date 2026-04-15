@@ -11,11 +11,14 @@ interface PostProps {
 }
 
 export default function Post({ post, thumbnail, direction }: PostProps) {
-  return (
-    <Card
-      fillWidth
-      key={post.slug}
-      href={`/blog/${post.slug}`}
+    const firstSection = post.sections?.[0];
+    const href = firstSection ? `/blog/${post.slug}/${firstSection.slug}` : `/blog/${post.slug}`;
+
+    return (
+      <Card
+        fillWidth
+        key={post.slug}
+        href={href}
       transition="micro-medium"
       direction={direction}
       border="transparent"
@@ -37,27 +40,39 @@ export default function Post({ post, thumbnail, direction }: PostProps) {
           aspectRatio="16 / 9"
         />
       )}
-      <Row fillWidth>
-        <Column maxWidth={28} paddingY="24" paddingX="l" gap="20" vertical="center">
-          <Row gap="24" vertical="center">
-            <Row vertical="center" gap="16">
-              <Avatar src={person.avatar} size="s" />
-              <Text variant="label-default-s">{person.name}</Text>
-            </Row>
-            <Text variant="body-default-xs" onBackground="neutral-weak">
-              {formatDate(post.metadata.publishedAt, false)}
-            </Text>
-          </Row>
-          <Text variant="heading-strong-l" wrap="balance">
+      <Column
+        fillWidth
+        gap="16"
+        padding="24"
+        radius="l"
+        border="neutral-alpha-weak"
+        background="surface"
+      >
+        <Column gap="8">
+          <Text variant="body-default-s" onBackground="neutral-weak">
+            {formatDate(post.metadata.publishedAt, false)}
+          </Text>
+          <Text
+            variant="heading-strong-xl"
+            wrap="balance"
+            style={{ color: "var(--neutral-on-background-strong)" }}
+          >
             {post.metadata.title}
           </Text>
-          {post.metadata.tag && (
-            <Text variant="label-strong-s" onBackground="neutral-weak">
-              {post.metadata.tag}
-            </Text>
-          )}
+          <Row vertical="center" gap="12" marginTop="8">
+            <Avatar src={person.avatar} size="s" />
+            <Text variant="label-strong-s">{person.name}</Text>
+          </Row>
         </Column>
-      </Row>
+
+        <Text variant="body-default-m" onBackground="neutral-weak" style={{ lineHeight: "1.6" }}>
+          {post.metadata.summary}
+        </Text>
+
+        <Text variant="label-strong-m" color="brand-on-background-weak">
+          Read More →
+        </Text>
+      </Column>
     </Card>
   );
 }

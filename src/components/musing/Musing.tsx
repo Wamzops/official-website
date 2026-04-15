@@ -11,11 +11,14 @@ interface MusingsProps {
 }
 
 export default function Musing({ musing, thumbnail, direction }: MusingsProps) {
-  return (
-    <Card
-      fillWidth
-      key={musing.slug}
-      href={`/musings/${musing.slug}`}
+    const firstSection = musing.sections?.[0];
+    const href = firstSection ? `/musings/${musing.slug}/${firstSection.slug}` : `/musings/${musing.slug}`;
+
+    return (
+      <Card
+        fillWidth
+        key={musing.slug}
+        href={href}
       transition="micro-medium"
       direction={direction}
       border="transparent"

@@ -1,0 +1,30 @@
+---
+title: "Project Overview"
+order: 0
+---
+
+## Introduction
+
+Traditional GDP estimates are authoritative but often come with reporting lags and coarse spatial granularity. Nighttime lights (NTL) observed from satellites have repeatedly been shown to correlate with human activity, electrification, urbanization, and economic output. This project proposes a GIS-based pipeline to estimate South Africa's GDP (national and subnational) by combining nighttime light intensity with administrative boundaries and complementary covariates.
+
+The core idea is to learn a mapping from features derived from NTL (and optional auxiliary data) to GDP targets (e.g., annual GDP, GDP by province), producing:
+
+- A reproducible geospatial ETL pipeline (ingestion → masking/cleaning → aggregation by admin unit)
+- Exploratory analysis showing the relationship between NTL and GDP over time
+- Baseline econometric and ML models for GDP inference (and optionally nowcasting/forecasting)
+- Maps and dashboards that communicate spatial patterns and model outputs
+
+## Research Questions
+
+1. To what extent can nighttime lights explain variation in South Africa's GDP across time and across provinces?
+2. Which NTL feature engineering choices (radiance summaries, thresholds, spatial smoothing, seasonality controls) are most predictive of GDP?
+3. How sensitive are estimates to known NTL confounders (gas flares, ephemeral lights, sensor differences, load shedding, aurora, fires)?
+4. What is the best strategy to produce robust subnational GDP estimates when ground-truth GDP is limited?
+5. How do auxiliary covariates (population, built-up area, road density, land use, electrification proxies) improve accuracy and interpretability?
+
+## Elevator Summary
+
+- Use VIIRS/DMSP nighttime lights and GIS boundary aggregation to create province-level features over time.
+- Train baseline models (linear/log-linear, ridge/lasso, random forest/XGBoost; optionally sequence models) to infer GDP.
+- Produce maps and time-series outputs to communicate economic activity patterns and uncertainty.
+- Deliver an extensible workflow that can be adapted to other countries once validated for South Africa.

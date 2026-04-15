@@ -1,0 +1,543 @@
+/* =========================================================
+   Docusaurus / Theme UI — Documentation Typography System
+   ========================================================= */
+
+/* --- Color Tokens — inherits Once UI theme automatically --- */
+:root {
+  /* Teal accent for active states */
+  --doc-primary: var(--brand-on-background-medium);
+  --doc-primary-light: var(--brand-alpha-weak);
+  --doc-primary-dark: var(--brand-on-background-strong);
+
+  /* Text colors — map to Once UI semantic tokens */
+  --doc-text: var(--neutral-on-background-strong);
+  --doc-secondary: var(--neutral-on-background-weak);
+  --doc-muted: var(--neutral-on-background-weak);
+
+  /* Backgrounds — fully inherit Once UI page bg */
+  --doc-bg: var(--page-background);
+  --doc-sidebar-bg: var(--page-background); /* same as page, no gray */
+  --doc-code-bg: var(--neutral-alpha-weak);
+
+  /* Borders */
+  --doc-border: var(--neutral-border-weak);
+  --doc-bg-hover: var(--neutral-alpha-weak);
+  --doc-bg-active: var(--brand-alpha-weak);
+
+  --content-max-width: 1024px;
+  --sidebar-width: 280px;
+  --toc-width: 240px;
+}
+
+/* =========================================================
+   Content Area — Docusaurus Typography
+   ========================================================= */
+
+.doc-content {
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    "Helvetica Neue",
+    sans-serif;
+  font-size: 1rem; /* 16px */
+  line-height: 1.65;
+  color: var(--doc-text);
+  letter-spacing: -0.011em;
+  word-break: break-word;
+  -webkit-font-smoothing: antialiased;
+}
+
+.doc-content h1 {
+  font-size: 2.8rem;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: var(--doc-text);
+}
+
+.doc-content h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--doc-border);
+  color: var(--doc-text);
+}
+
+.doc-content h3 {
+  font-size: 1.1875rem; /* 19px */
+  font-weight: 700;
+  line-height: 1.4;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  color: var(--doc-text);
+}
+
+.doc-content h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--doc-text);
+}
+
+.doc-content p {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--doc-text);
+}
+
+.doc-content ul,
+.doc-content ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.doc-content li {
+  margin-bottom: 0.35rem;
+  line-height: 1.65;
+}
+
+.doc-content a {
+  color: var(--doc-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.doc-content a:hover {
+  text-decoration: underline;
+}
+
+.doc-content blockquote {
+  border-left: 4px solid var(--doc-primary);
+  margin: 0 0 1rem 0;
+  padding: 0.75rem 1rem;
+  background: var(--doc-primary-light);
+  border-radius: 0 4px 4px 0;
+}
+
+.doc-content blockquote p {
+  margin: 0;
+  color: var(--doc-secondary);
+}
+
+.doc-content code {
+  background: var(--doc-code-bg);
+  border: 1px solid var(--doc-border);
+  border-radius: 3px;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.875rem;
+  font-family: "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+  color: #d6336c;
+}
+
+.doc-content pre {
+  background: var(--doc-code-bg);
+  border: 1px solid var(--doc-border);
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  overflow-x: auto;
+  margin-bottom: 1.5rem;
+}
+
+.doc-content pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--doc-text);
+  font-size: 0.875rem;
+}
+
+.doc-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+}
+
+.doc-content th {
+  background: var(--doc-code-bg);
+  font-weight: 700;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--doc-border);
+  color: var(--doc-text);
+}
+
+.doc-content td {
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--doc-border);
+  color: var(--doc-secondary);
+  vertical-align: top;
+}
+
+.doc-content hr {
+  border: none;
+  border-top: 1px solid var(--doc-border);
+  margin: 2rem 0;
+}
+
+.doc-content img {
+  max-width: 100%;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+/* =========================================================
+   Sidebar — Docusaurus Style
+   ========================================================= */
+
+.sidebar-container {
+  scrollbar-width: thin;
+  scrollbar-color: var(--doc-border) transparent;
+  background: var(--doc-sidebar-bg);
+}
+
+.sidebar-container::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-container::-webkit-scrollbar-thumb {
+  background: var(--doc-border);
+  border-radius: 4px;
+}
+
+/* Category label (e.g. "WORK PROJECTS") */
+.sidebar-category-label {
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 0.6875rem; /* 11px */
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--doc-muted);
+  padding: 0.75rem 0.75rem 0.25rem;
+  margin-top: 0.75rem;
+}
+
+/* Sidebar item — post title (top level) */
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 0.875rem; /* 14px */
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--doc-secondary);
+  padding: 0.4rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+  text-decoration: none !important;
+  user-select: none;
+}
+
+.sidebar-item:hover {
+  background: var(--doc-bg-hover);
+  color: var(--doc-text);
+}
+
+.sidebar-item.active {
+  background: var(--doc-bg-active);
+  color: var(--doc-primary) !important;
+  font-weight: 600;
+}
+
+/* Sub-items (H1 sections within a post) */
+.sidebar-sub-item {
+  display: block;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 0.8125rem; /* 13px */
+  font-weight: 400;
+  color: var(--doc-secondary);
+  padding: 0.3rem 0.75rem 0.3rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+  text-decoration: none !important;
+  border-left: 2px solid transparent;
+  line-height: 1.4;
+}
+
+.sidebar-sub-item:hover {
+  background: var(--doc-bg-hover);
+  color: var(--doc-text);
+}
+
+.sidebar-sub-item.active {
+  color: var(--doc-primary);
+  border-left-color: var(--doc-primary);
+  font-weight: 500;
+  background: var(--doc-bg-active);
+}
+
+/* Chevron icon */
+.sidebar-chevron {
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.sidebar-chevron.expanded {
+  transform: rotate(180deg);
+}
+
+/* =========================================================
+   Right TOC — "On this page"
+   ========================================================= */
+
+.toc-container {
+  position: sticky;
+  top: 0;
+  padding: 2rem 1rem 2rem 0.5rem;
+}
+
+.toc-label {
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 0.6875rem; /* 11px */
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--doc-muted);
+  margin-bottom: 0.75rem;
+}
+
+.toc-item {
+  display: block;
+  font-size: 0.8125rem; /* 13px */
+  font-weight: 400;
+  color: var(--doc-secondary);
+  padding: 0.25rem 0.5rem;
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+  line-height: 1.4;
+}
+
+.toc-item:hover {
+  color: var(--doc-primary);
+}
+
+.toc-item.active {
+  color: var(--doc-primary);
+  border-left-color: var(--doc-primary);
+  font-weight: 500;
+}
+
+.toc-item.level-3 {
+  padding-left: 1.25rem;
+}
+
+/* =========================================================
+   Pagination — Docusaurus Style
+   ========================================================= */
+
+.doc-pagination {
+  display: flex;
+  gap: 1rem;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--doc-border);
+}
+
+.pagination-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--doc-border);
+  border-radius: 8px;
+  text-decoration: none !important;
+  color: inherit;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  background: var(--doc-bg);
+}
+
+.pagination-card:hover {
+  border-color: var(--doc-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.pagination-card-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--doc-muted);
+}
+
+.pagination-card-title {
+  font-size: 0.9375rem; /* 15px */
+  font-weight: 600;
+  color: var(--doc-primary);
+  line-height: 1.3;
+}
+
+.pagination-card.prev {
+  align-items: flex-start;
+}
+
+.pagination-card.next {
+  align-items: flex-end;
+  text-align: right;
+}
+
+/* =========================================================
+   Landing page doc cards
+   ========================================================= */
+
+.doc-landing-card {
+  display: block;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--doc-border);
+  border-radius: 8px;
+  text-decoration: none !important;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+  background: var(--doc-bg);
+  color: inherit;
+}
+
+.doc-landing-card:hover {
+  border-color: var(--doc-primary);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.doc-landing-card .card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--doc-primary);
+  margin-bottom: 0.5rem;
+}
+
+.doc-landing-card .card-description {
+  font-size: 0.875rem;
+  color: var(--doc-secondary);
+  line-height: 1.5;
+}
+
+/* =========================================================
+   Layout Containers
+   ========================================================= */
+
+.doc-layout-root {
+  display: flex;
+  height: calc(100vh - 60px); /* subtract navbar height */
+  overflow: hidden;
+  background: transparent; /* let Once UI page bg show through */
+}
+
+.doc-sidebar-col {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  height: 100%;
+  overflow-y: auto;
+  background: transparent; /* inherit page background, no gray */
+  border-right: 1px solid var(--doc-border);
+  scrollbar-width: thin;
+  scrollbar-color: var(--doc-border) transparent;
+}
+
+.doc-sidebar-col::-webkit-scrollbar {
+  width: 4px;
+}
+
+.doc-sidebar-col::-webkit-scrollbar-thumb {
+  background: var(--doc-border);
+  border-radius: 4px;
+}
+
+.doc-content-col {
+  flex: 1;
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.doc-content-inner {
+  width: 100%;
+  max-width: var(--content-max-width);
+  padding: 2.5rem 2rem 4rem;
+}
+
+.doc-toc-col {
+  width: var(--toc-width);
+  flex-shrink: 0;
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* Breadcrumb */
+.doc-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8125rem;
+  color: var(--doc-secondary);
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.doc-breadcrumb a {
+  color: var(--doc-secondary);
+  text-decoration: none;
+}
+
+.doc-breadcrumb a:hover {
+  color: var(--doc-primary);
+}
+
+.doc-breadcrumb span {
+  opacity: 0.4;
+}
+
+/* Section badge */
+.doc-section-badge {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--doc-primary);
+  background: var(--doc-primary-light);
+  border-radius: 4px;
+  padding: 0.2rem 0.6rem;
+  margin-bottom: 0.75rem;
+}
