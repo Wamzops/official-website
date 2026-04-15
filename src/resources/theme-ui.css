@@ -63,6 +63,12 @@
   color: var(--doc-text);
 }
 
+@media (max-width: 640px) {
+  .doc-content h1 { font-size: 1.875rem; }
+  .doc-content h2 { font-size: 1.25rem; }
+  .doc-content h3 { font-size: 1rem; }
+}
+
 .doc-content h2 {
   font-size: 1.5rem;
   font-weight: 700;
@@ -452,92 +458,226 @@
 }
 
 /* =========================================================
-   Layout Containers
+   Layout Containers — Docusaurus-style sticky sidebar
+   The PAGE scrolls. Sidebars are position:sticky.
+   No hardcoded heights. Works on all screen sizes.
+   ========================================================= */
+
+/* =========================================================
+   Layout Containers — Docusaurus-style fluid layout
+   The PAGE scrolls. Sidebars are position:sticky.
+   No hardcoded heights. Fully fluid width management.
    ========================================================= */
 
 .doc-layout-root {
   display: flex;
-  height: calc(100vh - 60px); /* subtract navbar height */
-  overflow: hidden;
-  background: transparent; /* let Once UI page bg show through */
+  align-items: flex-start;
+  width: 100%;
+  min-height: 100vh;
+  position: relative;
+  /* Prevent horizontal blowout from any children */
+  overflow-x: hidden;
 }
 
+/* ---- Left sidebar: sticky, hides on mobile ---- */
 .doc-sidebar-col {
   width: var(--sidebar-width);
   flex-shrink: 0;
-  height: 100%;
+  position: sticky;
+  top: 0;
+  height: 100vh;
   overflow-y: auto;
-  background: transparent; /* inherit page background, no gray */
+  background: transparent;
   border-right: 1px solid var(--doc-border);
   scrollbar-width: thin;
   scrollbar-color: var(--doc-border) transparent;
+  z-index: 10;
 }
 
-.doc-sidebar-col::-webkit-scrollbar {
-  width: 4px;
+@media (max-width: 996px) {
+  .doc-sidebar-col {
+    display: none !important;
+  }
 }
 
+.doc-sidebar-col::-webkit-scrollbar { width: 4px; }
 .doc-sidebar-col::-webkit-scrollbar-thumb {
   background: var(--doc-border);
   border-radius: 4px;
 }
 
+/* ---- Center content: fluid, auto-height ---- */
 .doc-content-col {
   flex: 1;
-  height: 100%;
-  overflow-y: auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  position: relative;
 }
 
 .doc-content-inner {
   width: 100%;
   max-width: var(--content-max-width);
   padding: 2.5rem 2rem 4rem;
+  /* Ensure padding doesn't cause overflow */
+  box-sizing: border-box;
 }
 
+/* ---- Right TOC: sticky, hides below 1200px ---- */
 .doc-toc-col {
   width: var(--toc-width);
   flex-shrink: 0;
-  height: 100%;
+  position: sticky;
+  top: 0;
+  height: 100vh;
   overflow-y: auto;
+  z-index: 10;
 }
 
-/* Breadcrumb */
-.doc-breadcrumb {
+@media (max-width: 1200px) {
+  .doc-toc-col {
+    display: none !important;
+  }
+}
+
+/* =========================================================
+   Mobile Navigation Components
+   ========================================================= */
+
+/* Top bar below main header */
+.doc-mobile-nav-bar {
+  display: none; /* hidden on desktop */
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  background: var(--page-background);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--doc-border);
+  padding: 0.5rem 1rem;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.doc-mobile-hamburger {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: none;
+  border: 1px solid var(--doc-border);
+  border-radius: 6px;
+  color: var(--doc-secondary);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.doc-mobile-breadcrumbs {
+  flex: 1;
+  min-width: 0;
   font-size: 0.8125rem;
+  font-weight: 500;
   color: var(--doc-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Mobile TOC Accordion (On this page) */
+.doc-mobile-toc-toggle {
+  display: none;
+  width: 100%;
+  padding: 0.625rem 1rem;
+  background: var(--neutral-alpha-weak);
+  border: 1px solid var(--doc-border);
+  border-radius: 8px;
   margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.doc-breadcrumb a {
-  color: var(--doc-secondary);
-  text-decoration: none;
-}
-
-.doc-breadcrumb a:hover {
+  font-size: 0.8125rem;
+  font-weight: 600;
   color: var(--doc-primary);
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
 }
 
-.doc-breadcrumb span {
-  opacity: 0.4;
+.doc-mobile-toc-content {
+  display: none;
+  background: var(--page-background);
+  border: 1px solid var(--doc-border);
+  border-radius: 8px;
+  margin-top: -1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
 }
 
-/* Section badge */
-.doc-section-badge {
-  display: inline-block;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--doc-primary);
-  background: var(--doc-primary-light);
-  border-radius: 4px;
-  padding: 0.2rem 0.6rem;
-  margin-bottom: 0.75rem;
+.doc-mobile-toc-content.open {
+  display: block;
+}
+
+/* =========================================================
+   Responsive Breakpoints
+   ========================================================= */
+
+@media (max-width: 996px) {
+  .doc-mobile-nav-bar { display: flex; }
+  .doc-mobile-toc-toggle { display: flex; }
+  
+  .doc-content-inner {
+    padding: 1.25rem 1.25rem 3rem;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .doc-content-inner {
+    padding: 1rem 1rem 2.5rem;
+  }
+}
+
+/* =========================================================
+   Drawer & Utilities
+   ========================================================= */
+
+.body-locked {
+  overflow: hidden !important;
+  touch-action: none;
+}
+
+.doc-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 1000;
+  animation: fadeInOverlay 0.2s ease;
+}
+
+.doc-drawer-panel {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 280px;
+  max-width: 85vw;
+  background: var(--page-background);
+  z-index: 1001;
+  box-shadow: 10px 0 40px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  animation: slideFromLeft 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes slideFromLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

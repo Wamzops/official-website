@@ -7,14 +7,16 @@ import type { Heading } from "@/components/types";
 
 interface DocTableOfContentsProps {
   headings: Heading[];
+  onItemClick?: () => void;
 }
 
-export const DocTableOfContents: FC<DocTableOfContentsProps> = ({ headings }) => {
+export const DocTableOfContents: FC<DocTableOfContentsProps> = ({ headings, onItemClick }) => {
   const [activeId, setActiveId] = useState<string>("");
 
   const moveTo = useCallback((id: string) => {
     setActiveId(id);
-  }, []);
+    if (onItemClick) onItemClick();
+  }, [onItemClick]);
 
   useEffect(() => {
     if (!headings || headings.length === 0) return;

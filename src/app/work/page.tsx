@@ -54,11 +54,9 @@ export default function Work() {
 
       <div style={{ paddingBottom: "4rem" }}>
         {/* Modern Header */}
-        <div style={{ marginBottom: "3rem" }}>
-          <h1 style={{ fontSize: "2.5rem", fontWeight: 800, marginBottom: "0.5rem" }}>{work.title}</h1>
-          <p style={{ fontSize: "1.125rem", color: "var(--doc-secondary)", maxWidth: "600px" }}>
-            {work.description}
-          </p>
+      <div style={{ marginBottom: "3rem" }}>
+          <h1 className="library-heading">{work.title}</h1>
+          <p className="library-description">{work.description}</p>
         </div>
 
         {/* Interactive Library Client */}
