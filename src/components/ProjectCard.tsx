@@ -48,7 +48,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         gap="l"
       >
         {title && (
-          <Flex flex={5}>
+          <Flex flex={5} style={{ minHeight: '11rem' }}>
             <Heading as="h2" wrap="balance" variant="heading-strong-xl">
               {title}
             </Heading>

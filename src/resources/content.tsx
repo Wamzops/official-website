@@ -65,11 +65,11 @@ const home: Home = {
   },
   subline: (
     <>
-      Hi! I am Colette, a technology consultant at{" "}
+      Hi! I am Colette. I work at{" "}
       <Text as="span" size="m" weight="strong" color="brand-strong">
         PwC, Kenya
       </Text>
-      , where I help companies build resilient <br /> data solutions. I also build my own projects
+      , where I help global organizations unlock value from data while <br /> ensuring compliance, resilience, and governance. I also build my own projects
       during my spare time.
     </>
   ),
@@ -109,7 +109,7 @@ const about: About = {
       {
         company: "Pricewaterhousecoopers (PwC) Kenya",
         timeframe: "2023 - Present",
-        role: "Technology Consultant",
+        role: "",
         achievements: [
           <>
             Designed, documented, and implemented enterprise-wide data governance policies and

@@ -278,7 +278,12 @@ export function getProjectFolders(basePath: string[]) {
       })
       .sort((a, b) => a.order - b.order);
 
-    results.push({ slug: folder.name, metadata, overview: overviewContent.trim(), sections });
+    const projectSlug = folder.name
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, "")
+      .replace(/\s+/g, "-");
+
+    results.push({ slug: projectSlug, metadata, overview: overviewContent.trim(), sections });
   }
 
   return results;

@@ -1,0 +1,284 @@
+---
+title: "Project Checklist"
+order: 2
+---
+
+
+## Project Checklist
+
+## 1. Correct Delegation
+
+> *List who the project proposer(s) are and their function/role which highlights that they have the suitable context.*
+
+- Skills and experience with GIS, remote sensing, data analysis, and spatial/temporal feature engineering.
+- Familiarity with model evaluation and multi-class classification methods.
+- Knowledge of agricultural crop phenology and vegetation indices.
+- Experience with cloud-based EO platforms (e.g., Google Earth Engine, Sentinel Hub).
+
+## 2. The use case
+
+### 2.1 Output-focused ideation
+
+> *Explain the outputs of the project and explain why this output is valuable. "Is this the end or the means?"*
+
+<details color="#00ffff">
+  <summary> <strong>Breakdown of Outputs</strong></summary>
+
+  <span style={{ textDecoration: "underline" }}><strong><em>Satellite Imagery (Sentinel-2 L1C)</em></strong></span>
+    - Primary data source for crop type discrimination.
+    - **Outputs**: Cleaned multi-spectral rasters (GeoTIFF files), cloud-masked composites, and per-field pixel aggregates.
+    - Typical derived features per field: spectral band values (B02, B03, B04, B08, B11, B12), vegetation indices (NDVI, NDRE, WDRVI, MTCI), temporal statistics (mean, median, standard deviation), and phenological metrics (e.g., date of min/max NDVI, duration between min and max NDVI).
+
+  ---
+
+  <span style={{ textDecoration: "underline" }}><strong><em>Field Boundaries (GIS)</em></strong></span>
+    - Training and test set field polygons used to extract pixel-level features and to publish maps.
+    - **Outputs**: Consistent boundary set, area calculations, zonal statistics tables, and rasterized masks for semantic segmentation.
+
+  ---
+
+  <span style={{ textDecoration: "underline" }}><strong><em>Crop Type Labels (Ground Truth)</em></strong></span>
+    - Target labels for supervised classification.
+    - **Outputs**: Curated label table aligned with field IDs, plus metadata on crop types (nine classes: Cotton, Dates, Grass, Lucern, Maize, Pecan, Vacant, Vineyard, Intercrop).
+
+  ---
+
+  <span style={{ textDecoration: "underline" }}><strong><em>Auxiliary Features (Optional but Recommended)</em></strong></span>
+    - **Spatial features**: Texture metrics (GLCM), field size and shape descriptors.
+    - **Temporal features**: Interpolated time series of vegetation indices.
+    - These features help to capture field heterogeneity, boundary effects, and phenological dynamics.
+
+</details>
+
+### General Output
+
+1. A GIS and Machine Learning workflow that produces crop type predictions for fields along the Orange River in South Africa.
+2. A set of maps and charts showing:
+    1. Spatial distribution of classified crop types.
+    2. Feature importance and model decision boundaries.
+    3. Predicted vs. actual crop types and uncertainty metrics (e.g., log loss).
+3. A baseline model that can be re-run as new Sentinel-2 imagery becomes available.
+4. Explore the possibility of hosting an interactive map on Streamlit.
+
+### 2.2 Source of inspiration
+
+> *Explain what inspired this proposal. Provide any relevant details that highlight a particular challenge or opportunity this addresses.*
+
+- Accurate crop type mapping is foundational for agricultural monitoring, yield prediction, and food security planning, particularly in data-scarce regions like Sub-Saharan Africa.
+- This [Zindi Farm Pin Crop Detection Challenge](https://zindi.africa/competitions/farm-pin-crop-detection-challenge) provides a rare, publicly available, labeled dataset for a region where such data is a critical bottleneck.
+
+### 2.3 Appropriate task for ML/AI
+
+> *Explain why there is an ML/AI component needed. Provide any information that is available to substantiate the appropriateness. Include examples where relevant.*
+
+- The mapping from raw multi-spectral raster signals to crop types is noisy and non-linear; ML can capture complex interactions and regional heterogeneity.
+- Baselines should start simple (e.g., Random Forest, XGBoost), then move to deep learning models (e.g., U-Net, LSTM) once data alignment and leakage checks are correct.
+- Research demonstrates that XGBoost can achieve high accuracy (92.14%) for crop classification, outperforming RF, SVM, and ANN.
+- Deep learning models like U-Net with ResNet50 encoders have been successfully applied to semantic segmentation of crop types.
+- LSTMs can capture temporal dependencies in crop phenology, with studies showing F1-scores of 0.82 for phenological stage identification.
+
+### 2.4 User Experience
+
+> *Explain who your users are and how they will use the solution/outputs.*
+
+- Researchers and analysts: Reproduce crop classification experiments and compare modeling approaches.
+- Agricultural policymakers/agronomists: Interpret spatial patterns and monitor crop distribution across seasons.
+- Data journalists and the public: Consume maps and high-level summaries (with clear caveats about model uncertainty).
+
+### 2.5 Ethical considerations
+
+> *Explain how the project impacts all people it could affect. Who might be harmed by the outputs of this project? Who stands to benefit?*
+
+<Success color="#16a34a">
+Benefits:
+  - Faster, more spatially-detailed crop type information for agricultural monitoring.
+  - Potential to support food security planning and early warning systems.
+  - Scalable methodology that can be applied to other smallholder farming regions in Africa.
+</Success>
+
+<Alert>
+Risks:
+  - Misinterpretation: Model predictions are probabilistic and can be affected by cloud cover, sensor artifacts, and class imbalance; outputs must include uncertainty and caveats.
+  - Bias: Minor crops (e.g., Intercrop) may be underrepresented relative to major crops (e.g., Maize), leading to lower classification accuracy for those classes.
+  - Harm from overconfidence: avoid using outputs as sole basis for land use or policy decisions without triangulation with field surveys.
+</Alert>
+
+## 3. Reality check
+
+### 3.1 Reasonable expectations
+
+> *Explain the expectations of the output and considerations around the impact of mistakes.*
+
+- Expect moderate accuracy (e.g., 78% overall accuracy) due to small field sizes, irregular shapes, and limited training data.
+- Focus on field-level classification first; only move to pixel-wise segmentation if resources and validation are adequate.
+- Quantify error using log loss, confusion matrices, and class-wise F1-scores; communicate uncertainty to avoid overstating precision.
+
+### 3.2 Possible in production
+
+> *Explain what kinds of technology resources are needed to get this project into production.*
+
+- Raster processing stack (e.g., Python + rasterio/geopandas/xarray; or Google Earth Engine for scalable ETL).
+- Deep learning framework (e.g., PyTorch, TensorFlow) for U-Net/LSTM models.
+- Storage for rasters, EOPatches, and derived features.
+- Compute: moderate CPU for feature engineering; GPU required for deep learning training.
+
+### 3.3 Data availability
+
+> *Explain what data is available and how it will be accessed/created.*
+
+- Satellite imagery:
+  - Sentinel-2 L1C imagery for 11 timesteps (Jan–Aug 2017) for the AOI along the Orange River, South Africa.
+- Field boundaries:
+  - Training and test shapefiles (`train.zip` and `test.zip`) containing 2,497 training fields and 1,074 test fields.
+- Crop type labels:
+  - Nine crop type labels for each training field (Cotton, Dates, Grass, Lucern, Maize, Pecan, Vacant, Vineyard, Intercrop).
+
+### 3.4 Data volume
+
+> *Explain the volume of data and time component.*
+
+- Sentinel-2 imagery for 11 timesteps can be large, especially when stored as EOPatches.
+- Mitigation: clip to AOI, use cloud masking, and store derived features (e.g., zonal statistics) as tables.
+
+### 3.5 Required technology & compute
+
+> *Explain what processing power is needed for both R&D and production.*
+
+- Small cloud instance for feature engineering and baseline models.
+- Cloud/GEE or Sentinel Hub for repeated processing or larger-area experiments.
+
+### 3.6 Skills needed
+
+> *List the skills you think will be needed to make the project a success.*
+
+- GIS/Remote Sensing specialist (Sentinel-2 preprocessing, cloud masking, rasterization).
+- Data scientist (multi-class classification, feature engineering, model evaluation).
+- Deep learning engineer (U-Net, LSTM, data augmentation, transfer learning).
+- Domain reviewer for agricultural crop phenology and vegetation indices.
+
+### 3.7 Ground truth
+
+> *Explain what the ground truth outputs in this project are. Does it exist or still need to be created?*
+
+- The crop type labels for training fields provided by the competition organizers.
+- A key task is careful alignment of field boundaries with pixel labels and handling of class imbalance.
+
+### 3.8 Logging sanity
+
+> *Explain how confident you are that we can map input to output correctly.*
+
+- Moderate confidence once the pipeline standardizes:
+  - consistent cloud masking and cloud shadow removal
+  - consistent feature extraction per field (e.g., median/mean pixel values)
+  - consistent handling of class imbalance (e.g., stratified k-fold, class weights, focal loss)
+  - unit conversions and normalization of pixel values
+
+### 3.9 Logging quality
+
+> *Explain any data quality issues you foresee.*
+
+- Sentinel-2 issues: cloud cover artifacts, cloud shadows, atmospheric effects.
+- Class imbalance: some crops (e.g., Intercrop) have very few samples, leading to poor model performance for minority classes.
+- Spectral similarity: crops like Vineyard and Pecan can have similar phenological profiles, making discrimination difficult.
+- Smallholder context: fields can be small and irregular, making boundary alignment and pure pixel extraction difficult.
+
+### 3.10 Indifference curves
+
+> *List mistakes that could be in the eventual outputs and indicate how 'bad' the errors are relative to one another.*
+
+- Worst: systematic misclassification of a major crop (e.g., mislabeling Maize as Cotton) that misinforms agricultural policy.
+- Next: overfitting to the training set (looks great in-sample, fails on test set).
+- Less severe: noisy year-to-year variation that can be smoothed or constrained.
+
+## 4. Performance metrics
+
+### 4.1 Simulation
+
+> *Explain if the project would benefit from any form of simulation.*
+
+- Optional: synthetic experiments to test robustness to cloud cover, class imbalance, and feature selection choices.
+
+### 4.2 Metric creation
+
+> *Explain what your performance metric is.*
+
+- Core metric: multi-class logarithmic loss (log loss), as used in the competition.
+- Secondary metrics: overall accuracy, macro-F1 score (to account for class imbalance), and class-wise precision/recall.
+- Use stratified k-fold cross-validation to ensure representative class distribution across folds.
+
+### 4.3 Metric review
+
+> *Explain how the performance metric has been reviewed to ensure it can't be misinterpreted/abused/gamed.*
+
+- Report multiple metrics and include baselines (e.g., "predict majority class").
+- Always publish class-wise confusion matrices and residual diagnostics by crop type.
+
+### 4.4 Metric-loss comparison
+
+> *Explain how the performance metric correlates with a standard loss function.*
+
+- Log loss penalizes confident incorrect predictions, making it suitable for probabilistic classification.
+- Focal loss can be used to address class imbalance by down-weighting well-classified examples.
+
+### 4.5 Population
+
+> *Explain the statistical population of interest and detail any specific exclusions.*
+
+- Focus: fields along the Orange River in South Africa.
+- Exclusions/controls: mask clouds and cloud shadows; exclude fields with insufficient valid pixels; consider excluding saturated pixels if present.
+
+## 5. Testing criteria to overcome human biases
+
+### 5.1 Minimum performance
+
+> *Explain minimum acceptance criteria.*
+
+- Must beat a simple baseline (e.g., predict majority class "Maize") on a test set split.
+- Must show stable performance across crop types (no persistent extreme misclassification without explanation).
+
+## 6. Value creation
+
+### 6.1 Value drivers
+
+> *What benefit is gained by investing effort into this idea?*
+
+- Faster and spatially-explicit crop type mapping for agricultural monitoring.
+- A reusable geospatial methodology that can be extended to other countries and other crop types.
+- Insights into the most predictive spectral bands and vegetation indices for crop discrimination.
+
+# Checklist Review
+
+> *To be completed by at least 2 reviewers that did not complete the checklist above.*
+> <br />
+> <br />
+> Here you are indicating that you're comfortable there is enough information
+> available in this document for a given section for the project to be added to
+> the candidate list.
+
+-TBD
+
+## Additional Notes
+
+- Decide early whether the main deliverable is (a) field-level classification (most defensible given labels) or (b) pixel-wise segmentation (harder to validate but potentially more detailed).
+- Explicitly document how cloud contamination and class imbalance will be treated (masking, data augmentation, class weights, focal loss).
+- Keep a clear separation between:
+  - ETL (reproducible GIS processing with eo-learn)
+  - Modeling (baselines → ML → deep learning)
+  - Communication (maps, uncertainty, caveats)
+- Candidate auxiliary datasets for future extensions:
+  - Sentinel-1 SAR data (to complement optical data in cloudy conditions)
+  - High-resolution PlanetScope imagery (if available)
+  - Field boundary delineation models (e.g., ResUnet-a)
+
+## References
+
+1. Zindi. (2019). Farm Pin Crop Detection [Challenge](https://zindi.africa/competitions/farm-pin-crop-detection-challenge).
+2. Fadahunsi, O. (2019). Meet the Winners of the Farm Pin Crop Detection Challenge. [Zindi.](https://zindi.africa/learn/meet-the-winners-of-the-farm-pin-crop-detection-challenge).
+3. Grest, S. (2019). What’s growing there? Using eo-learn and fastai to identify crops from multi-spectral remote sensing data. [Towards Data Science.](https://towardsdatascience.com/whats-growing-there-a5618a2e6933).
+4. Thomas, L. (2020). Crop type mapping with deep learning. [Development Seed.](https://developmentseed.org/tutorial/croptype-deeplearning/).
+5. Kaur, P., & Sharma, A. (2024). Semantic segmentation of satellite images for crop type identification in smallholder farms. [The Journal of Supercomputing, 80, 1367–1395.](https://doi.org/10.1007/s11227-023-05533-4).
+6. Şimşek, F. F. (2025). Comparison of Agricultural Crop Type Classifications with Different Machine Learning Algorithms (RF-SVM-ANN-XGBoost) by Generating Ground Truth Data from Farmer Declaration Parcels. [International Journal of Engineering and Geosciences, 10, 207–220.](https://doi.org/10.26833/ijeg.1552141).
+7. Classification and Phenological Stage Monitoring of Grape Crop using Sentinel-1 and Sentinel-2 Time Series and Deep Learning Techniques. (2025). [ISPRS Annals of the Photogrammetry, Remote Sensing and Spatial Information Sciences.](https://isprs-annals.copernicus.org/).
+8. Radiant Earth. (2022). Weighted Tree-based Crop Classification Models for Imbalanced Datasets. [GitHub.](https://github.com/radiantearth/model_ecaas_agrifieldnet_silver).
+9. Sentinel Hub. (n.d.). eo-learn: Earth observation processing framework for machine learning in Python. [GitHub.](https://github.com/sentinel-hub/eo-learn).
+10. Development Seed. (n.d.). eo-flow: Deep learning for Earth observation. [GitHub.](https://github.com/sentinel-hub/eo-flow).

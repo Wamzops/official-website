@@ -128,8 +128,10 @@ function createCodeBlock(props: any) {
     const { className, children } = props.children.props;
 
     // Extract language from className (format: language-xxx)
-    const language = className.replace("language-", "");
-    const label = language.charAt(0).toUpperCase() + language.slice(1);
+    const rawLanguage = className.replace("language-", "");
+    const isText = rawLanguage === "text" || rawLanguage === "plaintext";
+    const language = isText ? "bash" : rawLanguage;
+    const label = isText ? "Plain Text" : language.charAt(0).toUpperCase() + language.slice(1);
 
     return (
       <CodeBlock
