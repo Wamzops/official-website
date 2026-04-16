@@ -128,7 +128,11 @@ export default function About() {
               >
                 <TiltFx>
                   <Row vertical="center">
-                    <Icon paddingLeft="12" name="calendar" onBackground="brand-weak" />
+                    <Icon
+                      paddingLeft="12"
+                      name="calendar"
+                      onBackground="brand-weak"
+                    />
                     <Row paddingX="12">Schedule a call</Row>
                   </Row>
                 </TiltFx>
@@ -189,13 +193,18 @@ export default function About() {
           </Column>
 
           {about.intro.display && (
-            <Column textVariant="body-default-l" fillWidth gap="m" marginBottom="xl">
+            <Column
+              textVariant="body-default-l"
+              fillWidth
+              gap="m"
+              marginBottom="xl"
+            >
               {about.intro.description}
             </Column>
           )}
-
-
-          {about.technical.display && <Certifications technical={about.technical} />}
+          {about.technical.display && (
+            <Certifications technical={about.technical} />
+          )}
         </Column>
       </Row>
     </Column>

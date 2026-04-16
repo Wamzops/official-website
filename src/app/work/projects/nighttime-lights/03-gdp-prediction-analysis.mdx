@@ -1,30 +1,7 @@
 ---
-title: "GDP Prediction — Analysis"
+title: "Implementation on Google Colab"
 order: 3
 ---
-
-## Project Overview
-
-This section covers the actual notebook analysis investigating whether **nighttime satellite light intensity** can be used as a proxy signal for **economic activity and GDP prediction** in South Africa.
-
-At a high level, the project follows a well-established research idea: artificial light observed at night is often correlated with population concentration, electrification, infrastructure intensity, and production activity.
-
-## Research Motivation
-
-The modelling choices align with literature from remote sensing, development economics, and applied machine learning:
-
-- **Nighttime lights as an economic proxy.** Henderson, Storeygard, and Weil (2012) showed that satellite-observed light can help measure economic growth, especially where official accounts are noisy or incomplete.
-- **Regularized linear models.** Ridge regression and Lasso are appropriate baselines when the number of predictors is modest but collinearity is likely.
-- **Tree ensembles and boosting.** Random forests and XGBoost are strong non-linear baselines when relationships may be thresholded or interaction-heavy.
-- **Explainable boosting.** Explainable Boosting Machines (EBMs) offer stronger predictive performance than simple linear models with better interpretability than black-box ensembles.
-- **Dimensionality reduction.** PCA is a reasonable preprocessing step for the World Bank indicator matrix.
-
-## Core Questions
-
-1. Can provincial nighttime-light intensity alone explain variation in South Africa's GDP?
-2. Do non-linear models outperform regularized linear baselines on the extracted light features?
-3. Does adding broad macroeconomic indicators improve predictive accuracy beyond nighttime lights alone?
-4. What are the trade-offs between accuracy and interpretability in this setting?
 
 ## Data Assets
 
@@ -34,82 +11,495 @@ The notebook accesses three main data groups:
 - **OpenStreetMap administrative boundaries** stored under `OSM`
 - **World Bank indicators** stored under `WorldBank/SA_Indicators.csv`
 
-## End-to-End Workflow
+<Alert>Some of the data is sensitive and to reproduce this work you might need to request for necessary authorization to use the data. </Alert>
 
-### 1. Environment setup
 
-The notebook installs geospatial and cloud I/O dependencies including pyogrio, boto3, s3fs, rasterio[s3], earthpy, xgboost, interpret, and streamlit.
+ 
+## Data Sources
+ 
+Three datasets power the pipeline:
+ 
+- **Nighttime satellite rasters** (1992–2022): Annual GeoTIFF files from the NOAA VIIRS/DMSP sensors, stored in an S3 bucket under `Nightlight_Satellite_Images_GDP`.
+- **OpenStreetMap administrative boundaries**: A `.osm.pbf` extract for South Africa, providing province-level polygon geometries for spatial aggregation.
+- **World Bank indicators**: A CSV file (`SA_Indicators.csv`) containing dozens of macroeconomic time-series for South Africa, used both as supplementary features and as the source of the GDP target variable.
+> **Note:** Some of this data is sensitive. Reproducing this work requires appropriate authorization to access the S3 bucket.
+ 
+---
+ 
+## Step by Step Workflow
 
-### 2. Cloud data access
+```python
+!pip install -q pyogrio boto3==1.28.0 s3fs rasterio[s3] earthpy xgboost interpret streamlit
+```
+ 
+The notebook leans on a specific set of geospatial and cloud I/O libraries:
+ 
+- **`rasterio`** — reads and writes GeoTIFFs, handles coordinate reference systems, and applies polygon masks to rasters.
+- **`pyogrio`** — fast vector I/O for reading OpenStreetMap geometries.
+- **`s3fs`** — wraps S3 so it behaves like a local filesystem, letting `rasterio` and `pandas` read directly from S3 paths.
+- **`earthpy`** — lightweight plotting utilities for raster data.
+- **`xgboost` / `interpret`** — gradient boosting and the Explainable Boosting Machine (EBM) for the modelling stage.
+```python
+import os, re
+from shutil import rmtree
+ 
+import pyogrio as pyg
+import geopandas as gpd
+import pandas as pd
+import rasterio as rio
+import numpy as np
+import seaborn as sns
+import s3fs
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+import earthpy.plot as ep
+ 
+from rasterio.mask import mask
+from rasterio.plot import show, show_hist, plotting_extent
+from rasterio.session import AWSSession
+```
+ 
+---
+ 
+## Connecting to AWS S3
+ 
+AWS credentials are injected as environment variables rather than hardcoded — an important security practice, especially in shared notebooks.
+ 
+```python
+os.environ['AWS_SECRET_ACCESS_KEY'] = secret_key
+os.environ['AWS_ACCESS_KEY_ID'] = access_key
+os.environ['AWS_DEFAULT_REGION'] = region_name
+os.environ['PYOGRIO_USE_ARROW'] = '1'  # enables fast Arrow-backed reads in pyogrio
+ 
+s3 = s3fs.S3FileSystem()
+```
+ 
+With `s3fs`, the bucket now behaves like a browsable directory. Downstream code can call `s3.ls()`, `s3.get()`, and `s3.put()` the same way it would use `os.listdir`, `shutil.copy`, etc.
+ 
+```python
+bucket = '2301-10-estimating-gdp-b/raw_data'
+night_data  = os.path.join(bucket, 'Nightlight_Satellite_Images_GDP')
+osm_data    = os.path.join(bucket, 'OSM')
+worldbank_data = os.path.join(bucket, 'WorldBank')
+```
+ 
+---
+ 
+## Loading South Africa's Administrative Boundaries
+ 
+```python
+osm_file = 'south-africa-220101.osm.pbf'
+s3.get(os.path.join(osm_data, osm_file), './')
+ 
+sa_shape = pyg.read_dataframe(
+    osm_file,
+    layer='multipolygons',
+    where="admin_level = '4'"
+)
+ 
+# Dissolve all provinces into one national footprint for cropping
+sa_mask = sa_shape.dissolve().geometry.to_list()
+```
+ 
+OpenStreetMap encodes administrative levels numerically. `admin_level = '4'` corresponds to South Africa's nine provinces (Western Cape, Gauteng, KwaZulu-Natal, etc.). The `dissolve()` step merges all nine polygons into a single national outline, which is then used as the crop boundary when processing each raster.
+ 
+---
+ 
+## Preprocessing: Cropping and Denoising the Rasters
+ 
+Nighttime light products cover the entire globe. Before extracting any useful signal, we need to:
+ 
+1. **Clip** each raster to South Africa's boundaries.
+2. **Threshold** out low-intensity values that represent noise rather than economic activity.
+```python
+def extract_year(f):
+    """Pulls the four-digit year out of a raster filename."""
+    file_name = f.split('/')[-1]
+    match = re.search(r'(\d{4})', file_name)
+    return match.group(1) if match else file_name.split('_')[-2]
+ 
+ 
+def trim_raster(tif, session):
+    """
+    Clips a raster to South Africa, zeros out dim background pixels,
+    writes the result locally, and uploads it back to S3.
+    """
+    with rio.Env(session):
+        with rio.open(f's3://{tif}') as src:
+            raster, transform = mask(src, sa_mask, crop=True)
+            meta = src.meta
+            meta.update({
+                "driver": "GTiff",
+                "height": raster.shape[1],
+                "width":  raster.shape[2],
+                "transform": transform
+            })
+ 
+    year = extract_year(tif)
+    os.makedirs('tmp', exist_ok=True)
+    filename = f'tmp/SA_{year}.tif'
+ 
+    # Threshold: keep only pixels brighter than digital number 7
+    raster = np.where(raster > 7, raster, 0)
+ 
+    with rio.open(filename, "w", **meta) as dest:
+        dest.write(raster)
+ 
+    s3.put(filename, f'{trimmed}/')
+ 
+ 
+# Run across all annual rasters
+session = AWSSession()
+nighttime_files = s3.glob(f"{night_data}/*.tif")
+for tif in nighttime_files:
+    trim_raster(tif, session)
+ 
+rmtree('tmp')
+```
+ 
+**Why threshold at 7 you may ask?** 
 
-The notebook authenticates to AWS, mounts an S3-backed file system with s3fs, and points to folders containing OSM boundaries, nighttime rasters, and World Bank indicators.
+>Raw nighttime light products include low digital-number (DN) values that capture atmospheric scatter, moonlight reflections, and other non-economic sources of faint illumination. Setting pixels below DN 7 to zero is a standard denoising step in the remote-sensing literature. It keeps genuine urban and industrial light while suppressing background noise. The exact value of 7 is a practitioner's heuristic; ideally it would be validated against ground truth, but it is a defensible starting point.
+ 
+To visually confirm the clipping and province alignment worked:
+ 
+```python
+def plot_provinces(tif: str):
+    fig, ax = plt.subplots(figsize=(10, 10))
+    with rio.open(f's3://{trimmed}/{tif}') as src:
+        arr_st  = src.read()
+        bound   = sa_shape.to_crs(src.profile["crs"])
+        extent  = plotting_extent(arr_st[0], src.profile["transform"])
+    bound.boundary.plot(ax=ax, color="red", zorder=10)
+    ep.plot_bands(arr_st[0], ax=ax, extent=extent,
+                  title=f"South Africa Nighttime {extract_year(tif)}")
+    plt.show()
+ 
+plot_provinces('SA_2021.tif')
+```
+ 
+---
+ 
+## Building the Feature Matrix: Province-Level Light Totals
+ 
+The core insight of the Henderson et al. approach is that summing pixel brightness within an administrative unit produces a single number that correlates with economic output for that unit. Here, each province gets one number per year.
+ 
+```python
+def get_prov_ntl(prov, src):
+    """Sum all pixel values within a single province polygon."""
+    prov_mask = sa_shape[sa_shape.name == prov].geometry
+    raster, _ = mask(src, prov_mask, crop=True)
+    return np.sum(raster[0].flatten())
+ 
+ 
+def get_year_ntls(tif):
+    """Return a dict of {province_name: total_light} for one raster year."""
+    with rio.open(f's3://{tif}') as src:
+        return {prov: get_prov_ntl(prov, src) for prov in sa_shape.name}
+ 
+ 
+sa_tifs = s3.ls(trimmed)
+prov_ntls = {extract_year(tif): get_year_ntls(tif) for tif in sa_tifs}
+df_ntls   = pd.DataFrame.from_dict(prov_ntls, orient='index')
+```
+ 
+The result is a DataFrame where each row is a year (1992–2022) and each column is a province. This is the primary feature matrix for the first round of models.
 
-### 3. Boundary extraction
-
-An OpenStreetMap extract for South Africa is downloaded locally, then administrative polygons are read from the multipolygons layer.
-
-### 4. Raster preprocessing
-
-Each nighttime raster is clipped to South Africa using `rasterio.mask.mask`. The clipped raster is thresholded with `np.where(raster > 7, raster, 0)` to suppress very low-intensity values.
-
-### 5. Feature construction
-
-For each trimmed raster year, the notebook sums nighttime-light values inside every province and builds a province-by-year feature table.
-
-### 6. Model experiments
-
-The project compares Ridge, Lasso, Random Forest, XGBoost, EBM, RF + PCA on World Bank indicators, and combined models using merged nighttime-lights + World Bank datasets.
-
-## Observed Results
-
-<div style={{ overflowX: "auto", width: "100%", margin: "40px 0" }}>
-  <table style={{ minWidth: "800px", width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-    <thead>
-      <tr style={{ borderBottom: "2px solid var(--neutral-alpha-medium)" }}>
-        <th style={{ padding: "16px 24px", fontWeight: "600" }}>Experiment</th>
-        <th style={{ padding: "16px 24px", fontWeight: "600" }}>Feature Set</th>
-        <th style={{ padding: "16px 24px", fontWeight: "600" }}>Key Metrics</th>
-        <th style={{ padding: "16px 24px", fontWeight: "600" }}>Interpretation</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr style={{ borderBottom: "1px solid var(--neutral-alpha-weak)" }}>
-        <td style={{ padding: "16px 24px" }}><strong>Ridge Regression</strong></td>
-        <td style={{ padding: "16px 24px" }}>Provincial nighttime lights</td>
-        <td style={{ padding: "16px 24px" }}>R² = 0.6429</td>
-        <td style={{ padding: "16px 24px" }}>A solid linear baseline; nighttime lights contain meaningful GDP signal.</td>
-      </tr>
-      <tr style={{ borderBottom: "1px solid var(--neutral-alpha-weak)" }}>
-        <td style={{ padding: "16px 24px" }}><strong>Lasso Regression</strong></td>
-        <td style={{ padding: "16px 24px" }}>Provincial nighttime lights</td>
-        <td style={{ padding: "16px 24px" }}>R² = 0.6966</td>
-        <td style={{ padding: "16px 24px" }}>Slightly better than Ridge, indicating sparse structure.</td>
-      </tr>
-      <tr style={{ borderBottom: "1px solid var(--neutral-alpha-weak)" }}>
-        <td style={{ padding: "16px 24px" }}><strong>XGBoost</strong></td>
-        <td style={{ padding: "16px 24px" }}>Provincial nighttime lights</td>
-        <td style={{ padding: "16px 24px" }}>R² = 0.7480</td>
-        <td style={{ padding: "16px 24px" }}>Stronger non-linear performance than linear models.</td>
-      </tr>
-      <tr style={{ borderBottom: "1px solid var(--neutral-alpha-weak)" }}>
-        <td style={{ padding: "16px 24px" }}><strong>EBM</strong></td>
-        <td style={{ padding: "16px 24px" }}>Provincial nighttime lights</td>
-        <td style={{ padding: "16px 24px" }}>R² = 0.8222</td>
-        <td style={{ padding: "16px 24px" }}>Best lights-only score with interpretability advantages.</td>
-      </tr>
-      <tr>
-        <td style={{ padding: "16px 24px" }}><strong>Voting Regressor</strong></td>
-        <td style={{ padding: "16px 24px" }}>Lights + World Bank</td>
-        <td style={{ padding: "16px 24px" }}>R² = 0.9979</td>
-        <td style={{ padding: "16px 24px" }}>Best reported fit; requires stronger validation against overfitting.</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-
-## Key Takeaways
-
-- **Nighttime lights are informative.** Even the simpler ridge and lasso baselines explain a substantial share of GDP variation.
-- **Non-linear models help.** XGBoost and EBM outperform linear baselines, suggesting the mapping from light intensity to GDP is not purely linear.
-- **Merged features dominate.** Combining nighttime lights with macro indicators produces very high R² values — though evaluation may be optimistic given the small annual sample.
-- **Interpretability matters.** The EBM result is especially interesting because it offers strong performance without sacrificing inspectability.
+---
+ 
+<Alert>
+  **One important caveat:** summing light totals over a province is sensitive to province size — larger provinces will tend to score higher even if they are economically weak simply because they contain more pixels. A more sophisticated analyses will normalize the data by area or population, or work at finer spatial resolutions.
+  
+</Alert>
+---
+ 
+## Attaching the GDP Target
+ 
+```python
+cols = ['Indicator Name'] + [str(yr) for yr in range(1992, 2023)]
+ 
+df_wb = (
+    pd.read_csv(f's3://{worldbank_data}/SA_Indicators.csv', usecols=cols)
+    .set_index('Indicator Name')
+    .T
+    .dropna(axis=1, how='any')
+)
+ 
+df_ntls['GDP'] = df_wb['GDP (current US$)']
+```
+ 
+The World Bank CSV stores each indicator as a row and years as columns, so it needs to be transposed before joining. We drop any indicator that has missing values in any year, keeping only the clean columns for later modelling.
+ 
+---
+ 
+## Visualizing the Signal
+ 
+Before fitting any model, a dual-axis plot shows whether province-level nighttime light totals visually track GDP over time:
+ 
+```python
+fig, ax1 = plt.subplots(figsize=(12, 8))
+ax2 = ax1.twinx()
+sns.lineplot(df_ntls[df_ntls.columns[:-1]], ax=ax1)
+sns.lineplot(df_ntls['GDP'], color="red", ax=ax2)
+ax1.set_xlabel('Year')
+ax1.set_ylabel('Total Nighttime Light (DN)', color='g')
+ax2.set_ylabel('GDP (current US$)', color='r')
+plt.show()
+```
+ 
+You can also generate an animated timelapse of the rasters across all years, which is a useful sanity check:
+ 
+```python
+fig, ax = plt.subplots()
+ax.axis('off')
+ax.set(title='South Africa Nighttime Light Intensity (1992-2022)')
+ims = []
+for tif in sa_tifs:
+    with rio.open(f's3://{tif}') as src:
+        im = ax.imshow(src.read(1), animated=True)
+        ims.append([im])
+ 
+ani = animation.ArtistAnimation(fig, ims, interval=500, blit=True, repeat_delay=1000)
+ani.save("movie.mp4", writer=animation.FFMpegWriter(fps=3, bitrate=1800))
+s3.put('movie.mp4', f'{night_data}/animation.mp4')
+```
+ 
+---
+ 
+## Modelling Stage 1: Predicting GDP from Nighttime Lights Alone
+ 
+### Ridge Regression
+ 
+Ridge regression adds an L2 penalty to the ordinary least-squares objective, shrinking all coefficients toward zero proportionally. This is particularly useful here because the nine province columns are likely correlated (provinces in the same economic region tend to brighten and dim together), which inflates coefficient variance in OLS. Hoerl and Kennard (1970) proposed ridge precisely to handle this multicollinearity.
+ 
+```python
+from sklearn.linear_model import Ridge
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
+import math
+ 
+X = df_ntls.drop(columns=['GDP'])
+y = df_ntls['GDP']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+ 
+scaler = StandardScaler()
+X_train_sc = scaler.fit_transform(X_train)
+X_test_sc  = scaler.transform(X_test)
+ 
+ridge = Ridge(alpha=1.0)
+ridge.fit(X_train_sc, y_train)
+preds = ridge.predict(X_test_sc)
+ 
+print("Ridge R²:  ", round(ridge.score(X_test_sc, y_test), 3))
+print("Ridge RMSE:", round(math.sqrt(mean_squared_error(y_test, preds)), 2))
+```
+ 
+An R² of ~0.6 tells us that nighttime light intensity alone explains about 60% of the variance in South Africa's GDP. That is a reasonable baseline but leaves room for improvement — the relationship may not be perfectly linear, and other economic forces not captured by luminosity are clearly at work.
+ 
+### Lasso Regression
+ 
+Where ridge shrinks all coefficients, Lasso (Tibshirani, 1996) uses an L1 penalty that drives some coefficients to exactly zero, performing implicit feature selection. If some provinces contribute very little signal, Lasso will zero them out.
+ 
+```python
+from sklearn.linear_model import Lasso
+ 
+lasso = Lasso(alpha=1.0)
+lasso.fit(X_train_sc, y_train)
+preds_lasso = lasso.predict(X_test_sc)
+ 
+print("Lasso coefficients:", lasso.coef_)
+print("Lasso R²:", round(r2_score(y_test, preds_lasso), 3))
+```
+ 
+Inspecting the coefficients reveals which provinces carry the most predictive weight after shrinkage — typically the more urbanized, economically active ones like Gauteng and the Western Cape.
+ 
+### Random Forest
+ 
+Linear models assume the relationship between light intensity and GDP is proportional everywhere. In practice, the marginal economic output of an additional unit of light might differ between a dense urban core and a sprawling mining province. Random forests (Breiman, 2001) capture these kinds of non-linear interactions and province-specific patterns naturally.
+ 
+```python
+from sklearn.ensemble import RandomForestRegressor
+ 
+X_train_r, X_test_r, y_train_r, y_test_r = train_test_split(X, y, test_size=0.2)
+rf = RandomForestRegressor(n_estimators=1000, n_jobs=-1, random_state=101)
+rf.fit(X_train_r, y_train_r)
+ 
+preds_rf = rf.predict(X_test_r)
+errors   = abs(preds_rf - y_test_r)
+print("Mean Absolute Error:", round(np.mean(errors), 2))
+print("Predicts GDP to within",
+      round((np.mean(errors) / y.median()) * 100, 1), "% of its median value.")
+print("RF R²:", round(r2_score(y_test_r, preds_rf), 3))
+```
+ 
+### XGBoost
+ 
+XGBoost (Chen & Guestrin, 2016) builds trees sequentially, with each new tree correcting the errors of the previous ones. This boosting approach often outperforms a plain random forest on small tabular datasets and is more computationally efficient than growing 1,000 parallel trees.
+ 
+```python
+import xgboost as xgb
+ 
+X_train_x, X_test_x, y_train_x, y_test_x = train_test_split(X, y, test_size=0.2, random_state=42)
+xgb_reg = xgb.XGBRegressor(
+    objective='reg:squarederror',
+    colsample_bytree=0.3, learning_rate=0.1,
+    max_depth=5, alpha=10, n_estimators=100, random_state=42
+)
+xgb_reg.fit(X_train_x, y_train_x)
+preds_xgb = xgb_reg.predict(X_test_x)
+ 
+print("XGBoost MSE:", round(mean_squared_error(y_test_x, preds_xgb), 2))
+print("XGBoost R²:", round(r2_score(y_test_x, preds_xgb), 3))
+```
+ 
+The higher R² from XGBoost compared to ridge/Lasso suggests that non-linear interactions between provinces do carry additional signal.
+ 
+### Explainable Boosting Machine (EBM)
+ 
+A key critique of random forests and XGBoost is that they are black boxes — it is hard to explain *why* a prediction was made. The Explainable Boosting Machine (Lou et al., 2013) is a glass-box alternative. It fits additive shape functions (splines) for each feature and then models pairwise interactions, preserving interpretability without sacrificing too much predictive power.
+ 
+```python
+from interpret.glassbox import ExplainableBoostingRegressor
+ 
+X_train_e, X_test_e, y_train_e, y_test_e = train_test_split(X, y, test_size=0.2, random_state=42)
+ebm = ExplainableBoostingRegressor()
+ebm.fit(X_train_e, y_train_e)
+preds_ebm = ebm.predict(X_test_e)
+ 
+print("EBM MSE:", round(mean_squared_error(y_test_e, preds_ebm), 2))
+print("EBM R²:", round(r2_score(y_test_e, preds_ebm), 3))
+```
+ 
+---
+ 
+## Modelling Stage 2: World Bank Indicators Alone
+ 
+The World Bank CSV contains dozens of macro indicators — inflation, trade balances, population growth, foreign direct investment, and more. Before fitting any model, two preparation steps are needed.
+ 
+### Standardization and PCA
+ 
+Many of these indicators are measured in very different units (percentages, absolute dollar amounts, ratios) and are heavily correlated with each other (e.g., GDP per capita and total GDP). Feeding all of them raw into a model creates two problems: feature scaling dominates the loss, and multicollinearity makes coefficients unstable.
+ 
+The solution is to standardize the features and then compress them with Principal Component Analysis (Pearson, 1901).
+ 
+```python
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+ 
+# Standardize
+scaler_wb = StandardScaler()
+scaled_wb = pd.DataFrame(scaler_wb.fit_transform(df_wb), columns=df_wb.columns)
+ 
+# How many components capture 99% of variance?
+pca_check = PCA(0.99)
+pca_check.fit_transform(scaled_wb.drop(columns=['GDP (current US$)']))
+print(f"{round(pca_check.explained_variance_ratio_.sum()*100, 1)}% of variance "
+      f"in {pca_check.n_components_} components.")
+```
+ 
+Knowing how many components are needed guides the choice of `n_components` in the final model. Using 18 components typically captures well above 95% of the variance while dramatically reducing dimensionality.
+ 
+```python
+reg_data     = scaled_wb.drop(columns=['GDP (current US$)'])
+reg_response = df_wb['GDP (current US$)']
+ 
+X_train_wb, X_test_wb, y_train_wb, y_test_wb = train_test_split(
+    reg_data, reg_response, test_size=0.2
+)
+ 
+pca_reg = PCA(n_components=18)
+X_train_wb = pca_reg.fit_transform(X_train_wb)
+X_test_wb  = pca_reg.transform(X_test_wb)
+ 
+rf_wb = RandomForestRegressor(n_estimators=1000, n_jobs=-1, random_state=101)
+rf_wb.fit(X_train_wb, y_train_wb)
+ 
+preds_wb = rf_wb.predict(X_test_wb)
+errors_wb = abs(preds_wb - y_test_wb)
+print("WB-only MAE:", round(np.mean(errors_wb), 2))
+print("WB-only R²:", round(r2_score(y_test_wb, preds_wb), 3))
+```
+ 
+---
+ 
+## Modelling Stage 3: Merging Nighttime Lights + World Bank Indicators
+ 
+The final question the notebook asks is whether combining the spatial signal (province-level lights) with macroeconomic context (World Bank indicators) improves predictions beyond either source alone.
+ 
+```python
+merged_df = pd.concat([df_ntls, df_wb], axis=1)
+merged_df.drop(columns=['GDP (current US$)'], inplace=True)  # remove duplicate target
+ 
+X_m = merged_df.drop(columns=['GDP'])
+y_m = merged_df['GDP']
+```
+ 
+Three models are tested on the merged dataset.
+ 
+### Merged Ridge
+ 
+```python
+X_train_m, X_test_m, y_train_m, y_test_m = train_test_split(X_m, y_m, test_size=0.2, random_state=42)
+scaler_m = StandardScaler()
+X_train_ms = scaler_m.fit_transform(X_train_m)
+X_test_ms  = scaler_m.transform(X_test_m)
+ 
+ridge_m = Ridge(alpha=1.0)
+ridge_m.fit(X_train_ms, y_train_ms)
+print("Merged Ridge R²:", round(ridge_m.score(X_test_ms, y_test_m), 3))
+```
+ 
+### Merged Random Forest
+ 
+```python
+rf_m = RandomForestRegressor(n_estimators=100, random_state=42)
+rf_m.fit(X_train_m, y_train_m)
+preds_m = rf_m.predict(X_test_m)
+print("Merged RF R²:", round(r2_score(y_test_m, preds_m), 3))
+```
+ 
+### Voting Regressor
+ 
+The voting regressor averages predictions from three complementary learners: a random forest (captures non-linear interactions), a gradient boosting model (corrects residuals sequentially), and a linear regression (provides a stable linear baseline). Averaging across different model families tends to reduce variance compared to any single model.
+ 
+```python
+from sklearn.ensemble import VotingRegressor, GradientBoostingRegressor
+from sklearn.linear_model import LinearRegression
+ 
+rf_v  = RandomForestRegressor(n_estimators=10, random_state=42)
+gb_v  = GradientBoostingRegressor(random_state=42)
+lr_v  = LinearRegression()
+ 
+voter = VotingRegressor([
+    ('RandomForest',      rf_v),
+    ('GradientBoosting',  gb_v),
+    ('LinearRegression',  lr_v)
+])
+voter.fit(X_train_m, y_train_m)
+preds_v = voter.predict(X_test_m)
+ 
+print("Voting Regressor MSE:", round(mean_squared_error(y_test_m, preds_v), 2))
+print("Voting Regressor R²:", round(r2_score(y_test_m, preds_v), 3))
+```
+ 
+---
+ 
+## A recap of the Key Design Choices and Why They Matter
+ 
+<Info color="#fcd34d" opacity="0.2">
+  - Aggregating raster intensity over provinces is a defensible way to convert imagery into tabular features for GDP modelling. This reduces very large raster data into economically interpretable administrative units, which matches how regional GDP is commonly reported. Aggregation also reduces the data points (pixels) into a manageable dataset.
+  - The line `np.where(raster > 7, raster, 0)` is a denoising step.  That is used because low digital-number values in nighttime-light products can capture background noise, dim ephemeral signals, or non-economic illumination. The exact threshold should ideally be validated, which this notebook does not do, but the intuition to use 7 is consistent with remote-sensing preprocessing practice.
+  - Using both regularized linear models and tree/boosting models is a stronger experimental design choice. This is because the linear models test whether the signal has proportional scaling. That is, the more the lights, the more the GDP expected and they assume a linear relationship between the two variables. Ensemble methods test whether the relationship contains interactions, saturation effects, or province-specific non-linearities. For instance, you may find that the relationship between nighttime lights and GDP in rural and urban centers does not behave linearly.Further, on analysis, you may find that the sum if the light intensity per province is not a good indicator of the economic activity in that province due to spatial bias. If you simply sum light intensity per province, larger provinces will almost always have higher totals—even if they are economically weak.
+  - Principle Component Analysis (PCA) is used to compress redundant macro indicators before fitting a model and helps reduce instability from a high-feature. This is used because the auxillary data used, World Bank Indicators, have a lot of features that are correlated with each other. For example, GDP per capita and GDP are highly correlated. Without dimensionality, the model produced at the end of the notebook may overfit and produce misleading coefficients.
+</Info>
+ 
+---
+ 
+## Limitations and Next Steps
+ 
+- The **dataset is very small** (31 annual observations). This constrains train-test splits significantly and makes any R² estimate unreliable. Cross-validation would be more appropriate than a single 80/20 split.
+- **Province-level aggregation** by simple summation is biased toward larger provinces. Normalizing by area or using per-capita luminosity would be a more defensible feature.
+- The **threshold value of 7** for denoising was not validated against an independent reference. Sensitivity analysis across a range of thresholds would improve confidence in the preprocessing step.
+- The **Streamlit app** scaffolded at the end of the notebook is a stub. A complete deployment would load the best-performing model, accept a year as input, and return a GDP prediction along with the provincial light map.
+---

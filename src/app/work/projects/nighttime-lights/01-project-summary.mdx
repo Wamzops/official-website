@@ -7,24 +7,43 @@ order: 1
 
 Traditional GDP estimates are authoritative but often come with reporting lags and coarse spatial granularity. Nighttime lights (NTL) observed from satellites have repeatedly been shown to correlate with human activity, electrification, urbanization, and economic output. This project proposes a GIS-based pipeline to estimate South Africa's GDP (national and subnational) by combining nighttime light intensity with administrative boundaries and complementary covariates.
 
-The core idea is to learn a mapping from features derived from NTL (and optional auxiliary data) to GDP targets (e.g., annual GDP, GDP by province), producing:
+## Project Overview
 
-- A reproducible geospatial ETL pipeline (ingestion → masking/cleaning → aggregation by admin unit)
+This project investigates whether nighttime satellite light intensity can be used as a proxy signal for economic activity and GDP prediction in South Africa. The notebook will build a full exploratory workflow that connects to cloud-hosted geospatial data, extracts provincial nighttime-light intensity from raster imagery, merges those features with macroeconomic indicators, and compares several regression models.
+
+## Summary
+
+<Info color="#00ffff" opacity="0.1">
+In summary the core idea is to explore how to map features derived from NTL (and optional auxiliary data) to GDP targets (e.g., annual GDP, GDP by province), to produce: 
+
+- A reproducible geospatial ETL pipeline
 - Exploratory analysis showing the relationship between NTL and GDP over time
 - Baseline econometric and ML models for GDP inference (and optionally nowcasting/forecasting)
 - Maps and dashboards that communicate spatial patterns and model outputs
+</Info>
 
-## Research Questions
+## Research Motivation and Rationale
 
-1. To what extent can nighttime lights explain variation in South Africa's GDP across time and across provinces?
-2. Which NTL feature engineering choices (radiance summaries, thresholds, spatial smoothing, seasonality controls) are most predictive of GDP?
-3. How sensitive are estimates to known NTL confounders (gas flares, ephemeral lights, sensor differences, load shedding, aurora, fires)?
-4. What is the best strategy to produce robust subnational GDP estimates when ground-truth GDP is limited?
-5. How do auxiliary covariates (population, built-up area, road density, land use, electrification proxies) improve accuracy and interpretability?
+The modelling choices in this notebook align with literature from remote sensing, development economics, and applied machine learning cited below:
 
-## Elevator Summary
+1. **Nighttime lights as an economic proxy.**  
+[Henderson, Storeygard, and Weil (2012)](https://www.aeaweb.org/articles?id=10.1257/aer.102.2.994) showed that satellite-observed light can help measure economic growth, especially where official accounts are noisy or incomplete.  
+[Chen and Nordhaus (2011)](https://www.pnas.org/doi/10.1073/pnas.1017031108) similarly demonstrated that luminosity can proxy economic statistics across countries.
 
-- Use VIIRS/DMSP nighttime lights and GIS boundary aggregation to create province-level features over time.
-- Train baseline models (linear/log-linear, ridge/lasso, random forest/XGBoost; optionally sequence models) to infer GDP.
-- Produce maps and time-series outputs to communicate economic activity patterns and uncertainty.
-- Deliver an extensible workflow that can be adapted to other countries once validated for South Africa.
+2. **Remote sensing for development estimation.**  
+[Jean et al. (2016)](https://www.science.org/doi/10.1126/science.aaf7894) showed that satellite imagery combined with machine learning can recover development-relevant signals such as poverty, reinforcing the idea that geospatial imagery can encode socioeconomic structure.
+
+3. **Regularized linear models.**  
+[Ridge regression (Hoerl and Kennard, 1970)](https://doi.org/10.1080/00401706.1970.10488634) and [Lasso (Tibshirani, 1996)](https://doi.org/10.1111/j.2517-6161.1996.tb02080.x) are appropriate baselines when the number of predictors is modest but collinearity is likely. Provincial nighttime-light series are highly correlated across space and time, so shrinkage is a reasonable first response.
+
+4. **Tree ensembles and boosting.**  
+[Random Forests (Breiman, 2001)](https://doi.org/10.1023/A:1010933404324) and [XGBoost](https://xgboost.readthedocs.io/) are strong non-linear baselines when relationships may be thresholded or interaction-heavy. They are useful when the effect of light intensity on GDP is not strictly linear.
+
+5. **Explainable boosting.**  
+[Explainable Boosting Machines (InterpretML)](https://interpret.ml/) are a good compromise when you want stronger predictive performance than a simple linear model but better interpretability than a black-box ensemble.  
+See also [GA2M (Lou et al., 2013)](https://doi.org/10.1145/2487575.2487579).
+
+6. **Dimensionality reduction.**  
+[Principal Component Analysis (Pearson, 1901)](https://doi.org/10.1080/14786440109462720) is a reasonable preprocessing step for the World Bank indicator matrix because the notebook uses hundreds of macro indicators over a relatively small number of annual observations.
+
+

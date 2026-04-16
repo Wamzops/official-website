@@ -86,15 +86,24 @@ export function extractHeadings(content: string) {
   // Extract H1 AND H2 headings for sidebar/TOC display
   const headingRegex = /^(#{1,3})\s+(.*)$/gm;
   const headings = [];
+  const slugCounts: Record<string, number> = {};
   let match;
 
   while ((match = headingRegex.exec(content)) !== null) {
       const level = match[1].length;
       const text = match[2].trim();
-      const slug = text
+      let slug = text
           .toLowerCase()
           .replace(/[^\w\s-]/g, '')
           .replace(/\s+/g, '-');
+      
+      if (slugCounts[slug] !== undefined) {
+        slugCounts[slug]++;
+        slug = `${slug}-${slugCounts[slug]}`;
+      } else {
+        slugCounts[slug] = 0;
+      }
+
       headings.push({ level, text, slug });
   }
 
@@ -105,6 +114,7 @@ export function splitPostIntoSections(content: string) {
   // Split on H1 (#) so each major section is its own navigable page
   const h1Regex = /^#\s+(.*)$/gm;
   const sections: { title: string; slug: string; content: string }[] = [];
+  const slugCounts: Record<string, number> = {};
 
   let firstMatch = h1Regex.exec(content);
 
@@ -139,10 +149,17 @@ export function splitPostIntoSections(content: string) {
   for (let i = 0; i < allMatches.length; i++) {
       const match = allMatches[i];
       const title = match[1].trim();
-      const slug = title
+      let slug = title
           .toLowerCase()
           .replace(/[^\w\s-]/g, '')
           .replace(/\s+/g, '-');
+      
+      if (slugCounts[slug] !== undefined) {
+        slugCounts[slug]++;
+        slug = `${slug}-${slugCounts[slug]}`;
+      } else {
+        slugCounts[slug] = 0;
+      }
 
       const startIndex = match.index + match[0].length;
       const endIndex = i + 1 < allMatches.length ? allMatches[i + 1].index : content.length;

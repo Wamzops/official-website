@@ -1,26 +1,86 @@
 ---
-title: "Additional Notes"
+title: "Discussions, Results, Conclusion and Future Work"
 order: 4
 ---
+## Observed Results
 
-## Key Decisions
+<div style={{ overflowX: "auto", width: "100%", margin: "40px 0" }}>
+  <table style={{ minWidth: "800px", width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+    <thead>
+      <tr style={{ borderBottom: "2px solid var(--neutral-alpha-medium)" }}>
+        <th style={{ padding: "16px 24px", fontWeight: "600" }}>Experiment</th>
+        <th style={{ padding: "16px 24px", fontWeight: "600" }}>Feature Set</th>
+        <th style={{ padding: "16px 24px", fontWeight: "600" }}>Key Metrics</th>
+        <th style={{ padding: "16px 24px", fontWeight: "600" }}>Interpretation</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style={{ borderBottom: "1px solid var(--neutral-alpha-weak)" }}>
+        <td style={{ padding: "16px 24px" }}><strong>Ridge Regression</strong></td>
+        <td style={{ padding: "16px 24px" }}>Provincial nighttime lights</td>
+        <td style={{ padding: "16px 24px" }}>R² = 0.6429</td>
+        <td style={{ padding: "16px 24px" }}>A solid linear baseline; nighttime lights contain meaningful GDP signal.</td>
+      </tr>
+      <tr style={{ borderBottom: "1px solid var(--neutral-alpha-weak)" }}>
+        <td style={{ padding: "16px 24px" }}><strong>Lasso Regression</strong></td>
+        <td style={{ padding: "16px 24px" }}>Provincial nighttime lights</td>
+        <td style={{ padding: "16px 24px" }}>R² = 0.6966</td>
+        <td style={{ padding: "16px 24px" }}>Slightly better than Ridge, indicating sparse structure.</td>
+      </tr>
+      <tr style={{ borderBottom: "1px solid var(--neutral-alpha-weak)" }}>
+        <td style={{ padding: "16px 24px" }}><strong>XGBoost</strong></td>
+        <td style={{ padding: "16px 24px" }}>Provincial nighttime lights</td>
+        <td style={{ padding: "16px 24px" }}>R² = 0.7480</td>
+        <td style={{ padding: "16px 24px" }}>Stronger non-linear performance than linear models.</td>
+      </tr>
+      <tr style={{ borderBottom: "1px solid var(--neutral-alpha-weak)" }}>
+        <td style={{ padding: "16px 24px" }}><strong>EBM</strong></td>
+        <td style={{ padding: "16px 24px" }}>Provincial nighttime lights</td>
+        <td style={{ padding: "16px 24px" }}>R² = 0.8222</td>
+        <td style={{ padding: "16px 24px" }}>Best lights-only score with interpretability advantages.</td>
+      </tr>
+      <tr>
+        <td style={{ padding: "16px 24px" }}><strong>Voting Regressor</strong></td>
+        <td style={{ padding: "16px 24px" }}>Lights + World Bank</td>
+        <td style={{ padding: "16px 24px" }}>R² = 0.9979</td>
+        <td style={{ padding: "16px 24px" }}>Best reported fit; requires stronger validation against overfitting.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
-- Decide early whether the main deliverable is **(a) provincial GDP inference** (most defensible given labels) or **(b) higher-resolution GDP mapping** (harder to validate).
-- Explicitly document how load shedding and lighting technology changes will be treated (covariate, normalization, or robustness checks).
-- Keep a clear separation between:
-  - **ETL** — reproducible GIS processing
-  - **Modeling** — baselines → ML
-  - **Communication** — maps, uncertainty, caveats
 
-## Candidate Auxiliary Datasets for South Africa
+## Interpretation of Results
+Several patterns stand out:
 
-- **Population density:** GRID3, Meta HRSL, Kontur
-- **Built-up / land use:** Dynamic World / GHSL
-- **Roads/POIs:** OpenStreetMap
+- **Nighttime lights are informative.** Even the simpler ridge and lasso baselines explain a substantial share of GDP variation.
+- **Non-linear models help.** XGBoost and EBM outperform the linear baselines on the nighttime-light-only feature set, suggesting that the mapping from regional light intensity to GDP is not purely linear.
+- **Merged features dominate.** Combining nighttime lights with macro indicators produces extremely high `R^2` values, which probably means the merged dataset contains strong predictive information, but also that the evaluation may be too optimistic for such a small annual sample.
+- **Interpretability matters.** The EBM result is especially interesting because it offers strong performance without giving up inspectability to the same degree as XGBoost.
+
+## Methodological Caveats
+This notebook is promising, but the README should also document its limitations clearly:
+
+- **Very small sample size.** Annual data from 1992-2022 gives only about 31 observations after reshaping, which is tiny for the number of features being considered.
+- **Potential temporal leakage.** Random train/test splits on time-indexed macroeconomic data can overstate performance if later-year structure leaks into training.
+- **Overfitting risk.** The merged dataset contains many predictors relative to sample size, which can produce inflated `R^2` on a random holdout.
+- **Unclear target granularity.** The response is national GDP, while the nighttime-light features are provincial totals. That is workable, but it should be framed explicitly as national GDP predicted from subnational spatial aggregates.
+- **Reproducibility issue.** The notebook currently contains hard-coded AWS credentials. Those should never be published and should be replaced by environment variables or a secrets manager.
+- **Placeholder sections remain.** Several cells reference code to be added from other notebooks, so the project appears partially consolidated rather than fully finalized.
+
+## Recommended Improvements
+For extended beyond exploratory analysis, the next high-value steps will be:
+
+1. Replace random train/test splits with **time-aware validation** such as rolling-origin or blocked time splits.
+2. Report additional metrics such as **MAPE**, **MAE**, and confidence intervals across multiple splits.
+3. Test alternative raster summaries such as mean, median, lit-area share, or top-decile intensity, not just summed brightness.
+4. Add feature-importance or shape-function visualizations, especially for EBM and XGBoost.
+
 
 ## Suggested Repository Structure
+Because the current work is notebook-heavy, a cleaner production-ready structure would look like this:
 
-```
+```text
 project/
 |- README.md
 |- notebooks/
@@ -38,7 +98,6 @@ project/
 ```
 
 ## Reproducibility Notes
-
 To rerun this project safely:
 
 1. Install the Python packages used in the notebook.
@@ -48,9 +107,14 @@ To rerun this project safely:
 5. Rebuild `df_ntls`, reload the indicator dataset, and then rerun the modelling experiments.
 
 ## Paper References
+These are the main papers supporting the project's rationale and modelling choices:
 
-1. Henderson, J. V., Storeygard, A., & Weil, D. N. (2012). *Measuring Economic Growth from Outer Space*. American Economic Review, 102(2), 994-1028.
-2. Chen, X., & Nordhaus, W. D. (2011). *Using luminosity data as a proxy for economic statistics*. Proceedings of the National Academy of Sciences, 108(21), 8589-8594.
-3. Jean, N., Burke, M., et al. (2016). *Combining satellite imagery and machine learning to predict poverty*. Science, 353(6301), 790-794.
-4. Breiman, L. (2001). *Random Forests*. Machine Learning, 45, 5-32.
-5. Chen, T., & Guestrin, C. (2016). *XGBoost: A Scalable Tree Boosting System*. KDD 2016, 785-794.
+1. Henderson, J. V., Storeygard, A., & Weil, D. N. (2012). *Measuring Economic Growth from Outer Space*. American Economic Review, 102(2), 994-1028. [https://doi.org/10.1257/aer.102.2.994](https://doi.org/10.1257/aer.102.2.994)
+2. Chen, X., & Nordhaus, W. D. (2011). *Using luminosity data as a proxy for economic statistics*. Proceedings of the National Academy of Sciences, 108(21), 8589-8594. [https://doi.org/10.1073/pnas.1017031108](https://doi.org/10.1073/pnas.1017031108)
+3. Jean, N., Burke, M., Xie, M., Davis, W. M., Lobell, D. B., & Ermon, S. (2016). *Combining satellite imagery and machine learning to predict poverty*. Science, 353(6301), 790-794. [https://doi.org/10.1126/science.aaf7894](https://doi.org/10.1126/science.aaf7894)
+4. Hoerl, A. E., & Kennard, R. W. (1970). *Ridge Regression: Biased Estimation for Nonorthogonal Problems*. Technometrics, 12(1), 55-67. [https://doi.org/10.1080/00401706.1970.10488634](https://doi.org/10.1080/00401706.1970.10488634)
+5. Tibshirani, R. (1996). *Regression Shrinkage and Selection via the Lasso*. Journal of the Royal Statistical Society: Series B, 58(1), 267-288. [https://doi.org/10.1111/j.2517-6161.1996.tb02080.x](https://doi.org/10.1111/j.2517-6161.1996.tb02080.x)
+6. Breiman, L. (2001). *Random Forests*. Machine Learning, 45, 5-32. [https://doi.org/10.1023/A:1010933404324](https://doi.org/10.1023/A:1010933404324)
+7. Chen, T., & Guestrin, C. (2016). *XGBoost: A Scalable Tree Boosting System*. Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining, 785-794. [https://doi.org/10.1145/2939672.2939785](https://doi.org/10.1145/2939672.2939785)
+8. Lou, Y., Caruana, R., Gehrke, J., & Hooker, G. (2013). *Accurate Intelligible Models with Pairwise Interactions*. Proceedings of the 19th ACM SIGKDD International Conference on Knowledge Discovery and Data Mining, 623-631. [https://doi.org/10.1145/2487575.2487579](https://doi.org/10.1145/2487575.2487579)
+9. Pearson, K. (1901). *On Lines and Planes of Closest Fit to Systems of Points in Space*. Philosophical Magazine, 2(11), 559-572. [https://doi.org/10.1080/14786440109462720](https://doi.org/10.1080/14786440109462720)

@@ -3,56 +3,367 @@ title: "Project Checklist"
 order: 2
 ---
 
-## 1. What are the skills necessary?
+<Alert color="#dc2626" opacity="0.1">
+  This page contains preliminary tasks and rationale to develop a proposal for
+  estimating South Africa’s GDP using nighttime satellite imagery and GIS
+  workflows and can be used for reproducibility of the project. 
+</Alert>
 
-- Skills and experience with GIS, remote sensing, data analysis, and spatial/temporal feature engineering
+
+The purpose of completing the following checklist is to provide the rationale
+for the project and to validate that the idea makes sense to put Research and
+Development (R&D) effort into.
+
+## Research Questions
+
+1. To what extent can nighttime lights explain variation in South Africa’s GDP
+   across time and across provinces?
+2. Which NTL feature engineering choices (radiance summaries, thresholds,
+   spatial smoothing, seasonality controls) are most predictive of GDP?
+3. How sensitive are estimates to known NTL confounders (gas flares, ephemeral
+   lights, sensor differences, load shedding, aurora, fires)?
+4. What is the best strategy to produce robust subnational GDP estimates when
+   ground-truth GDP is limited (temporal cross-validation, hierarchical    models, transfer learning)?
+5. How do auxiliary covariates (population, built-up area, road density, land
+   use, electrification proxies) improve accuracy and interpretability?
+
+#### Expected Key Outputs
+>
+> - Use VIIRS/DMSP nighttime lights and GIS boundary aggregation to create
+>   province-level (and optionally district/municipality-level) features over
+>   time.
+> - Train baseline models (linear/log-linear, ridge/lasso, random forest/XGBoost;
+>   optionally sequence models) to infer GDP.
+> - Produce maps and time-series outputs to communicate economic activity
+>   patterns and uncertainty.
+> - Deliver an extensible workflow that can be adapted to other countries once
+>   validated for South Africa.
+
+## Project Checklist
+
+A detailed project checklist is provided [here](https://www.notion.so/A-GIS-based-approach-to-estimate-South-Africa-s-GDP-using-nighttime-satellite-imagery-f52805ad0aea41ef91cb52eaaeae7252?source=copy_link) 
+
+<Alert>This is a Notion link and might require a login to view.</Alert>
+
+## 1. Correct Delegation
+
+> *List who the project proposer(s) are and their function/role which highlights
+> that they have the suitable context.*
+
+- Skills and experience with GIS, remote sensing, data analysis, and
+  spatial/temporal feature engineering
 - Familiarity with model evaluation and time-series / panel data methods
 
 ## 2. The use case
+### 2.1 Output-focused ideation
 
-**Nighttime Satellite Imagery (NTL)** — Primary signal used as a proxy for economic activity.
-- Outputs: cleaned radiance rasters, annual/monthly composites, stable-light masks, and per-admin-unit aggregates.
-- Typical derived features per province/year: sum of radiance, mean radiance, lit-area share above threshold(s), top-percentile radiance (p90/p95), inequality metrics (Gini of radiance distribution), and temporal change rates.
+> *Explain the outputs of the project and explain why this output is valuable.
+> “Is this the end or the means?”*
 
-**Administrative boundaries (GIS)** — Provincial and optionally district/municipal polygons used to aggregate raster signals and to publish maps.
+---
+<details color="#00ffff">
+  <summary> <strong>Breakdown of Outputs</strong></summary>
 
-**Official GDP targets** — Ground truth labels for supervised inference. Curated GDP table aligned by year and admin unit (e.g., GDP by province), plus metadata on revisions/definitions.
+  <span style={{ textDecoration: "underline" }}><strong><em>Nighttime Satellite Imagery (NTL)</em></strong></span>{" "}
+    - Primary signal used as a proxy for economic activity.
+    - **Outputs**: Cleaned radiance rasters of Geotiff files and annual/monthly composites, stable-light
+      masks, and per-admin-unit aggregates.
+    - Typical derived features per province/year: sum of radiance, mean radiance,
+      lit-area share above threshold(s), top-percentile radiance (p90/p95),
+      inequality metrics (Gini coefficient of radiance distribution), and temporal change
+      rates.
+  
+  ---
 
-**Auxiliary covariates (optional but recommended)**
-- Population grids / density (e.g., WorldPop, Meta HRSL, Kontur)
-- Built-up / land use (e.g., Dynamic World, GHSL)
-- Road networks and accessibility (e.g., OpenStreetMap)
-- These covariates help separate "lights because of people" vs "lights because of industry/infrastructure", and improve model stability.
+  <span style={{ textDecoration: "underline" }}><strong><em>Administrative boundaries (GIS)</em></strong></span>{" "}
+    - Provincial (and optionally district/municipal) polygons used to aggregate
+    raster signals and to publish maps.
+    - **Outputs**: Consistent boundary set, area calculations, zonal statistics
+      tables, map layers in the form of shapefiles. These will be used to clip the NTL rasters or geotiff files to the boundaries of the admin units.
+  
+  ---
+  
+  <span style={{ textDecoration: "underline" }}><strong><em>Official GDP targets</em></strong></span>{" "}
+    - Ground truth labels for supervised inference.
+    - **Outputs**: Curated GDP table aligned by year and admin unit (e.g., GDP by
+      province), plus metadata on revisions/definitions.
+  
+  ---
+  
+  <span style={{ textDecoration: "underline" }}><strong><em>Auxiliary covariates (optional but recommended)</em></strong></span>
+    - Population grids or density (e.g., WorldPop, Meta HRSL, Kontur)
+    - Built-up or land use (e.g., Dynamic World, GHSL)
+    - Road networks and accessibility (e.g., HOTSOM or OpenStreetMap which are open source geography platforms)
+    - These covariates will help to  separate “lights because of people” vs “lights because
+      of industry/infrastructure”, and improve model stability.
+  
+  ---
+</details>
+
+### The Output
+
+- A GIS and Machine Learning workflow that produces GDP estimates for South Africa at national and
+  provincial levels for a selected time range. The timerange will be dependent on what nighttime light data is used; either the DMSP or VIIRS. 
+  - A set of maps and charts showing:
+    1. Spatial distribution of NTL intensity
+    2. NTL-derived feature trends by province
+    3. Predicted vs actual GDP and uncertainty bands
+- A baseline model that can be re-run as new NTL composites and GDP updates
+  become available.
+-Also explore the possibility of hosting it on streamlit
+
+### 2.2 Source of inspiration
+
+> *Explain what inspired this proposal. Provide any relevant details that
+> highlight a particular challenge or opportunity this addresses.*
+
+- Nighttime lights have a documented relationship with economic indicators and
+  have been used for GDP inference/nowcasting in multiple contexts.
+- This approach can complement official statistics with higher-frequency,
+  spatially-explicit signals that can be mapped and monitored.
+- Example references:
+  1. [World Bank Report on Sustainable Cities](https://blogs.worldbank.org/sustainablecities/nighttime-lights-are-revolutionizing-way-we-understand-covid-19-and-our-world)
+  
+
+### 2.3 Appropriate task for ML/AI
+
+> *Explain why there is an ML/AI component needed. Provide any information that
+> is available to substantiate the appropriateness. Include examples where
+> relevant.*
+
+- The mapping from raw raster signals and their covariates to GDP is noisy and
+  non-linear. As such, ML can capture interactions and regional heterogeneity.
+- Baselines should start simple methods such as log-linear and panel regression, then move to ML
+  models once data alignment and leakage checks are correct.
+- If extending to [monthly nowcasting](https://en.wikipedia.org/wiki/Nowcasting_(economics)), sequence models or [state-space](https://www.ibm.com/think/topics/state-space-model)
+  other approaches may be appropriate.
+
+### 2.4 User Experience
+
+> *Explain who your users are and how they will use the solution/outputs.*
+
+- Researchers and analysts: Reproduce GDP inference experiments and compare
+  modeling approaches.
+- Policymakers/think tanks: Interpret spatial patterns and monitor changes
+  across provinces.
+- Data journalists and the public: Consume maps and high-level summaries (with
+  clear caveats).
+
+### 2.5 Ethical considerations
+
+> *Explain how the project impacts all people it could affect. Who might be
+> harmed by the outputs of this project? Who stands to benefit?*
+
+<Success color="#16a34a">
+- Benefits:
+  - Faster, more spatially-detailed economic insights
+  - Potential to detect shocks and recovery patterns.
+</Success>
+
+<Alert>
+Risks:
+  - Misinterpretation: NTL is a proxy and can be affected by load shedding,
+    sensor artifacts, and sector composition; outputs must include uncertainty
+    and caveats.
+  - Bias: areas with low electrification or different lighting technology may be
+    underrepresented relative to real economic output.
+  - Harm from overconfidence: avoid using outputs as sole basis for funding/policy
+    decisions without triangulation.
+</Alert>
 
 ## 3. Reality check
 
-**Reasonable expectations**
-- Expect correlation, not perfect measurement: NTL is informative but incomplete.
-- Clearly define scope: infer GDP at national/provincial level first; only move to finer admin units if labels and validation are adequate.
-- Quantify error and communicate uncertainty; avoid overstating precision.
+### 3.1 Reasonable expectations
 
-**Data availability**
-- Night lights: Monthly/annual VIIRS products from [eogdata.mines.edu](https://eogdata.mines.edu/products/vnl/)
-- GDP targets: South Africa GDP data (including provincial GDP for 2008–2019)
-- Admin boundaries: Statistics South Africa / official boundary datasets
-- Optional covariates: Daytime satellite imagery, population density layers
+> *Explain the expectations of the output and considerations around the impact
+> of mistakes.*
+
+- Expect correlation, not perfect measurement as NTL is informative but incomplete.
+- Infer GDP at national/provincial level first; only move
+  to finer admin units if labels and validation are adequate.
+- Quantify error and communicate uncertainty to avoid overstating precision.
+
+### 3.2 Possible in production
+
+> *Explain what kinds of technology resources are needed to get this project
+> into production.*
+
+- Raster processing stack (e.g., Python + rasterio/geopandas/xarray; or Google
+  Earth Engine for scalable ETL)
+- Storage for rasters and intermediate products
+- Compute: moderate CPU for zonal stats; GPU only if deep learning on imagery is
+  pursued
+
+### 3.3 Data availability
+
+> *Explain what data is available and how it will be accessed/created.*
+
+- Night lights:
+  - Monthly/annual VIIRS products: https://eogdata.mines.edu/products/vnl/
+- GDP targets:
+  - South Africa GDP data (including provincial GDP for 2008–2019 referenced in
+    the existing spreadsheet source)
+- Admin boundaries:
+  - Statistics South Africa / official boundary datasets (or other authoritative
+    boundary sources)
+- Optional covariates:
+  - Daytime satellite imagery (Sentinel-2 / Landsat) and land cover (Dynamic
+    World)
+  - Population density layers (e.g., GRID3, Meta HRSL, Kontur)
+
+### 3.4 Data volume
+
+> *Explain the volume of data and time component.*
+
+- NTL rasters can be large, especially at monthly cadence.
+- Mitigation: clip to South Africa, use yearly composites for baselines, and
+  store derived aggregates as tables.
+
+### 3.5 Required technology & compute
+
+> *Explain what processing power is needed for both R&D and production.*
+
+- R&D: local machine or small cloud instance for yearly composites and
+  provincial aggregation.
+- Scaling: cloud/GEE for repeated monthly processing or larger-area experiments.
+
+### 3.6 Skills needed
+
+> *List the skills you think will be needed to make the project a success.*
+
+- GIS/Remote Sensing specialist
+- Data scientist (panel/time-series modeling)
+- Data engineer (ETL, reproducibility)
+- Domain reviewer for national accounts / GDP definitions
+
+### 3.7 Ground truth
+
+> *Explain what the ground truth outputs in this project are. Does it exist or
+> still need to be created?*
+
+- Primary ground truth: official GDP (national + provincial where available)
+  aligned to the same time scale as NTL features.
+- A key task is careful alignment of definitions (nominal vs real GDP, base
+  year, sector coverage) and revisions.
+
+### 3.8 Logging sanity
+
+> *Explain how confident you are that we can map input to output correctly.*
+
+- Moderate confidence once the pipeline standardizes:
+  - consistent boundaries
+  - consistent time windows
+  - consistent masking for ephemeral lights and artifacts
+  - unit conversions and inflation adjustments (if applicable)
+
+### 3.9 Logging quality
+
+> *Explain any data quality issues you foresee.*
+
+- NTL issues: cloud cover artifacts (depending on product), stray light,
+  background noise, blooming, sensor changes.
+- South Africa-specific confounder to account for: load shedding and
+  policy/technology shifts in lighting.
+
+### 3.10 Indifference curves
+
+> *List mistakes that could be in the eventual outputs and indicate how 'bad'
+> the errors are relative to one another.*
+
+- Worst: systematic bias that misranks provinces persistently (misleading for
+  spatial comparisons).
+- Next: overfitting to a short time window (looks great in-sample, fails
+  out-of-sample).
+- Less severe: noisy year-to-year variation that can be smoothed or constrained.
 
 ## 4. Performance metrics
 
-**Metric creation**
-- Core metrics: RMSE/MAE on GDP (often on log-GDP), MAPE (with care), and rank-correlation across provinces.
-- Use time-based splits (train on earlier years, test on later years) to avoid leakage.
+### 4.1 Simulation
 
-**Metric review**
-- Report multiple metrics and include baselines (e.g., "predict last year's GDP").
+> *Explain if the project would benefit from any form of simulation.*
+
+- Optional: synthetic experiments to test robustness to missing lights,
+  thresholding choices, and temporal lags.
+
+### 4.2 Metric creation
+
+> *Explain what your performance metric is.*
+
+- Core metrics (depending on target): RMSE/MAE on GDP (often on log-GDP), MAPE
+  (with care), and rank-correlation across provinces.
+- Use time-based splits (train on earlier years, test on later years) to avoid
+  leakage.
+
+### 4.3 Metric review
+
+> *Explain how the performance metric has been reviewed to ensure it can't be
+> misinterpreted/abused/gamed.*
+
+- Report multiple metrics and include baselines (e.g., “predict last year’s
+  GDP”).
 - Always publish uncertainty and residual diagnostics by province.
 
-## 5. Testing & validation criteria
+### 4.4 Metric-loss comparison
 
-Must beat a simple baseline (e.g., lag-1 GDP) on a time-based test split.
-Must show stable performance across provinces (no persistent extreme residuals without explanation).
+> *Explain how the performance metric correlates with a standard loss function.*
+
+- If modeling log-GDP, MSE on log targets aligns with RMSE in log-space and
+  stabilizes variance.
+- Consider robust losses (Huber) if outliers exist.
+
+### 4.5 Population
+
+> *Explain the statistical population of interest and detail any specific
+> exclusions.*
+
+- Focus: South Africa overall and provinces.
+- Exclusions/controls: mask gas flares and ephemeral events if present; consider
+  excluding saturated pixels depending on product.
+
+## 5. Testing criteria to overcome human biases
+
+### 5.1 Minimum performance
+
+> *Explain minimum acceptance criteria.*
+
+- Must beat a simple baseline (e.g., lag-1 GDP) on a time-based test split.
+- Must show stable performance across provinces (no persistent extreme residuals
+  without explanation).
 
 ## 6. Value creation
 
+### 6.1 Value drivers
+
+> *What benefit is gained by investing effort into this idea?*
+
 - Faster and spatially-explicit economic measurement and monitoring.
-- A reusable geospatial methodology that can be extended to other countries and other macro indicators.
+- A reusable geospatial methodology that can be extended to other countries and
+  other macro indicators.
+
+# Checklist Review
+
+> *To be completed by at least 2 reviewers that did not complete the checklist
+> above.*  
+> <br />
+> <br />
+> Here you are indicating that you're comfortable there is enough information
+> available in this document for a given section for the project to be added to
+> the candidate list.
+
+-TBD
+
+## Additional Notes
+
+- Decide early whether the main deliverable is (a) provincial GDP inference
+  (most defensible given labels) or (b) higher-resolution GDP mapping (harder to
+  validate).
+- Explicitly document how load shedding and lighting technology changes will be
+  treated (covariate, normalization, or robustness checks).
+- Keep a clear separation between:
+  - ETL (reproducible GIS processing)
+  - Modeling (baselines → ML)
+  - Communication (maps, uncertainty, caveats)
+- Candidate auxiliary datasets for South Africa:
+  - Population density: GRID3, Meta HRSL, Kontur
+  - Built-up / land use: Dynamic World / GHSL
+  - Roads/POIs: OpenStreetMap

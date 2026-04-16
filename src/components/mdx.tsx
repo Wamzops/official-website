@@ -146,8 +146,6 @@ function createCodeBlock(props: any) {
       />
     );
   }
-
-  // Fallback for other pre tags or empty code blocks
   return <pre {...props} />;
 }
 
@@ -171,7 +169,156 @@ function createHR() {
   );
 }
 
+const getColor = (color?: string, opacity?: number) => {
+  if (!color) return undefined;
+  
+  // Handle hex codes with custom opacity
+  if (color.startsWith('#')) {
+    // If it's a 6-digit hex, we can easily append alpha hex
+    if (color.length === 7) {
+      const alpha = opacity !== undefined ? opacity : 1;
+      const alphaHex = Math.round(alpha * 255).toString(16).padStart(2, '0');
+      return `${color}${alphaHex}`;
+    }
+    return color;
+  }
+  
+  // For other formats or tokens, use color-mix if opacity is needed
+  if (opacity !== undefined && (color.startsWith('rgb') || color.startsWith('hsl') || !color.includes('var('))) {
+    return `color-mix(in srgb, ${color}, transparent ${Math.round((1 - opacity) * 100)}%)`;
+  }
+  
+  return color.startsWith('var(') ? color : `var(--${color}, ${color})`;
+};
+
+const Info = ({ children, color, opacity }: { children: ReactNode; color?: string; opacity?: number }) => (
+  <Feedback
+    variant="info"
+    marginBottom="16"
+    style={color ? { 
+      backgroundColor: getColor(color, opacity ?? 0.1), 
+      borderColor: getColor(color, opacity ?? 0.3) 
+    } : undefined}
+  >
+    {children}
+  </Feedback>
+);
+
+const Alert = ({ children, color, opacity }: { children: ReactNode; color?: string; opacity?: number }) => (
+  <Feedback
+    variant="danger"
+    marginBottom="16"
+    style={color ? { 
+      backgroundColor: getColor(color, opacity ?? 0.1), 
+      borderColor: getColor(color, opacity ?? 0.3) 
+    } : undefined}
+  >
+    {children}
+  </Feedback>
+);
+
+const Warning = ({ children, color, opacity }: { children: ReactNode; color?: string; opacity?: number }) => (
+  <Feedback
+    variant="warning"
+    marginBottom="16"
+    style={color ? { 
+      backgroundColor: getColor(color, opacity ?? 0.1), 
+      borderColor: getColor(color, opacity ?? 0.3) 
+    } : undefined}
+  >
+    {children}
+  </Feedback>
+);
+
+const Success = ({ children, color, opacity }: { children: ReactNode; color?: string; opacity?: number }) => (
+  <Feedback
+    variant="success"
+    marginBottom="16"
+    style={color ? { 
+      backgroundColor: getColor(color, opacity ?? 0.1), 
+      borderColor: getColor(color, opacity ?? 0.3) 
+    } : undefined}
+  >
+    {children}
+  </Feedback>
+);
+
+const Highlight = ({ children, color = "brand-alpha-weak", opacity }: { children: ReactNode; color?: string; opacity?: number }) => (
+  <Text
+    as="span"
+    paddingX="4"
+    style={{
+      backgroundColor: getColor(color, opacity),
+      borderRadius: 'var(--radius-s)',
+    }}
+  >
+    {children}
+  </Text>
+);
+
+const Underline = ({ children, color = "brand-strong", opacity }: { children: ReactNode; color?: string; opacity?: number }) => (
+  <Text
+    as="span"
+    style={{
+      borderBottom: `2px solid ${getColor(color, opacity)}`,
+      paddingBottom: "1px",
+    }}
+  >
+    {children}
+  </Text>
+);
+
+const Details = ({ children, color, opacity, ...props }: any) => {
+  const borderColor = color ? getColor(color, opacity ?? 0.3) : 'var(--mdx-details-border)';
+  const bgColor = color ? getColor(color, opacity ?? 0.05) : 'var(--mdx-details-bg)';
+  const textColor = color ? getColor(color, 1) : 'var(--mdx-details-text)';
+
+  return (
+    <details
+      className="markdown-details"
+      style={{
+        border: `1px solid ${borderColor}`,
+        backgroundColor: bgColor,
+        borderRadius: '8px',
+        marginBottom: '1.5rem',
+        overflow: 'hidden',
+        display: 'block',
+        ['--mdx-details-text' as any]: textColor,
+      } as any}
+      {...props}
+    >
+      {children}
+    </details>
+  );
+};
+
+const Summary = ({ children, color, ...props }: any) => {
+  const textColor = color ? getColor(color, 1) : 'var(--mdx-details-text)';
+  
+  return (
+    <summary
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        padding: '12px 16px',
+        fontWeight: '500',
+        cursor: 'pointer',
+        color: textColor,
+        listStyleWidth: '0',
+      } as any}
+      {...props}
+    >
+      {children}
+    </summary>
+  );
+};
+
 const components = {
+  details: Details,
+  summary: Summary,
+  Details,
+  Summary,
   p: createParagraph as any,
   h1: createHeading("h1") as any,
   h2: createHeading("h2") as any,
@@ -187,6 +334,12 @@ const components = {
   ul: createList("ul") as any,
   li: createListItem as any,
   hr: createHR as any,
+  Info,
+  Alert,
+  Warning,
+  Success,
+  Highlight,
+  Underline,
   Heading,
   Text,
   CodeBlock,

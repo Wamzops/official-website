@@ -2,7 +2,11 @@ import { CustomMDX, ScrollToHash } from "@/components";
 import { ContentLayout } from "@/components/ContentLayout";
 import { about, baseURL, person, work } from "@/resources";
 import { formatDate } from "@/utils/formatDate";
-import { getProjectFolders, getFolderSidebarPosts, extractHeadings } from "@/utils/utils";
+import {
+  getProjectFolders,
+  getFolderSidebarPosts,
+  extractHeadings,
+} from "@/utils/utils";
 import { AvatarGroup, Media, Meta, Schema, Text } from "@once-ui-system/core";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
@@ -36,14 +40,20 @@ export async function generateMetadata({
   const project = projects.find((p) => p.slug === projectSlug);
   if (!project) return {};
 
-  const section = sectionSlug ? project.sections.find((s) => s.slug === sectionSlug) : null;
-  const title = section ? `${project.metadata.title} — ${section.title}` : project.metadata.title;
+  const section = sectionSlug
+    ? project.sections.find((s) => s.slug === sectionSlug)
+    : null;
+  const title = section
+    ? `${project.metadata.title} — ${section.title}`
+    : project.metadata.title;
 
   return Meta.generate({
     title,
     description: project.metadata.summary,
     baseURL,
-    image: project.metadata.images?.[0] || `/api/og/generate?title=${encodeURIComponent(title)}`,
+    image:
+      project.metadata.images?.[0] ||
+      `/api/og/generate?title=${encodeURIComponent(title)}`,
     path: `${work.path}/${slug.join("/")}`,
   });
 }
@@ -77,16 +87,24 @@ export default async function Project({
   const allSections = project.sections;
   const currentIdx = allSections.findIndex((s) => s.slug === sectionSlug);
   const prevSection = currentIdx > 0 ? allSections[currentIdx - 1] : null;
-  const nextSection = currentIdx < allSections.length - 1 ? allSections[currentIdx + 1] : null;
+  const nextSection =
+    currentIdx < allSections.length - 1 ? allSections[currentIdx + 1] : null;
 
   // TOC from H2 headings in current section
   const sectionHeadings = extractHeadings(currentSection.content);
 
   const isFirstSection = currentIdx === 0;
-  const avatars = project.metadata.team?.map((m) => ({ src: m.avatar })).filter((a) => a.src) || [];
+  const avatars =
+    project.metadata.team
+      ?.map((m) => ({ src: m.avatar }))
+      .filter((a) => a.src) || [];
 
   return (
-    <ContentLayout posts={sidebarPosts} category="work" tocHeadings={sectionHeadings}>
+    <ContentLayout
+      posts={sidebarPosts}
+      category="work"
+      tocHeadings={sectionHeadings}
+    >
       <Schema
         as="blogPosting"
         baseURL={baseURL}
@@ -113,7 +131,13 @@ export default async function Project({
           <div style={{ marginBottom: "2rem" }}>
             {/* Cover image */}
             {project.metadata.images?.[0] && (
-              <div style={{ marginBottom: "1.5rem", borderRadius: "12px", overflow: "hidden" }}>
+              <div
+                style={{
+                  marginBottom: "1.5rem",
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                }}
+              >
                 <Media
                   priority
                   aspectRatio="16 / 9"
@@ -137,17 +161,35 @@ export default async function Project({
                 <img
                   src={avatars[0].src}
                   alt={person.name}
-                  style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover" }}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                  }}
                 />
               )}
-              <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--doc-text)" }}>
+              <div
+                style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}
+              >
+                <span
+                  style={{
+                    fontSize: "0.875rem",
+                    fontWeight: 600,
+                    color: "var(--doc-text)",
+                  }}
+                >
                   {person.name}
                 </span>
                 {project.metadata.publishedAt && (
                   <>
                     <span style={{ opacity: 0.3 }}>·</span>
-                    <span style={{ fontSize: "0.875rem", color: "var(--doc-secondary)" }}>
+                    <span
+                      style={{
+                        fontSize: "0.875rem",
+                        color: "var(--doc-secondary)",
+                      }}
+                    >
                       {formatDate(project.metadata.publishedAt)}
                     </span>
                   </>
@@ -156,13 +198,23 @@ export default async function Project({
             </div>
 
             {/* Title */}
-            <h1 style={{ marginBottom: "0.75rem" }}>{project.metadata.title}</h1>
+            <h1 style={{ marginBottom: "0.75rem" }}>
+              {project.metadata.title}
+            </h1>
 
             {/* Tag / role badge */}
             {project.metadata.role && (
               <span
                 className="doc-section-badge"
-                style={{ marginBottom: "1.5rem", display: "inline-block" }}
+                style={{
+                  marginBottom: "1.5rem",
+                  display: "inline-block",
+                  backgroundColor:
+                    project.metadata.role === "Lead" ? "#2563eb" : "#16a34a",
+                  color: "#fff",
+                  padding: "4px 10px",
+                  borderRadius: "6px",
+                }}
               >
                 {project.metadata.role}
               </span>
@@ -171,7 +223,9 @@ export default async function Project({
         )}
 
         {/* Section heading (non-first sections) */}
-        {!isFirstSection && <h1 style={{ marginBottom: "1.5rem" }}>{currentSection.title}</h1>}
+        {!isFirstSection && (
+          <h1 style={{ marginBottom: "1.5rem" }}>{currentSection.title}</h1>
+        )}
 
         {/* Article body */}
         <article>
