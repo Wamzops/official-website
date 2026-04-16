@@ -1,4 +1,5 @@
 import type { About, Blog, Musings, Home, Newsletter, Person, Social, Work } from "@/types";
+import React from "react";
 import { Column, Line, Row, Tag, Text } from "@once-ui-system/core";
 import Image from "next/image";
 
@@ -49,7 +50,7 @@ const home: Home = {
   label: "Home",
   title: `${person.name}'s Portfolio`,
   description: `Portfolio website showcasing my work as a ${person.role}`,
-  headline: <>Build. Lead. Teach. </>,
+  headline: <>Learn. Build. Teach. </>,
   featured: {
     display: true,
     title: (
@@ -61,7 +62,7 @@ const home: Home = {
         </Text>
       </Row>
     ),
-    href: "/work/project_1",
+    href: "/work",
   },
   subline: (
     <>
@@ -69,7 +70,7 @@ const home: Home = {
       <Text as="span" size="m" weight="strong" color="brand-strong">
         PwC, Kenya
       </Text>
-      , where I help global organizations unlock value from data while <br /> ensuring compliance, resilience, and governance. I also build my own projects
+      , where I help global organizations unlock value from their data. <br /> I also build my own projects and write about them
       during my spare time.
     </>
   ),
@@ -111,26 +112,22 @@ const about: About = {
         timeframe: "2023 - Present",
         role: "",
         achievements: [
-          <>
+          <React.Fragment key="ach-pwc-1">
             Designed, documented, and implemented enterprise-wide data governance policies and
-            procedures for data handling, usage, and lifecycle management for a large retailer with
-            a 200TB+ data environment.
-          </>,
-          <>
-            Utilised expertise in SQL, SQL Server Management Tools, and Alteryx to build queries,
-            automate validation processes, and transform complex data sets, directly supporting the
-            migration of 90+ key business entities for a Kenyan retail company from Microsoft AX to
-            Microsoft Dynamics 365.
-          </>,
-          <>
-            Audited IT systems and controls for 5+ Tier 1 banks in Kenya, assessing technology risk,
-            regulatory compliance, and governance frameworks which helped to strengthen operational
-            resilience and align IT with business objectives.
-          </>,
-          <>
-            Served as Secretary on the founding committee of PwC Toastmasters, coordinating
-            meetings, managing documentation, and driving membership growth.
-          </>,
+            frameworks, ensuring compliance with local and international regulations.
+          </React.Fragment>,
+          <React.Fragment key="ach-pwc-2">
+            Spearheaded data quality initiatives by developing automated detection and remediation
+            workflows, reducing manual intervention and increasing overall data accuracy.
+          </React.Fragment>,
+          <React.Fragment key="ach-pwc-3">
+            Facilitated cross-functional data literacy workshops to empower stakeholders with the
+            tools and knowledge to make data-driven decisions.
+          </React.Fragment>,
+          <React.Fragment key="ach-pwc-4">
+            Established and chaired the Data Governance Council, fostering a culture of
+            accountability and continuous improvement in data management practices.
+          </React.Fragment>,
         ],
         images: [
           // optional: leave the array empty if you don't want to display images
@@ -141,22 +138,22 @@ const about: About = {
         timeframe: " September 2023 - December 2023",
         role: "Data Science Intern",
         achievements: [
-          <>
+          <React.Fragment key="ach-ext-1">
             Led an international student team in the design, development, and deployment of a Gross
             Domestic Product (GDP) prediction application for South Africa using Python and Amazon
             S3 and EC2 services, achieving an 87% model accuracy in forecasting the country's
             economic performance
-          </>,
-          <>
+          </React.Fragment>,
+          <React.Fragment key="ach-ext-2">
             Authored and published a comprehensive report on the application of geospatial data and
             satellite imagery in economic and financial modelling and provided actionable
             recommendations for policymakers and businesses.
-          </>,
-          <>
+          </React.Fragment>,
+          <React.Fragment key="ach-ext-3">
             Orchestrated seamless communication and project management across time zones using tools
             such as Slack, Zoom, ClickUp and Trello, achieving 100% on-time delivery of project
             milestones.
-          </>,
+          </React.Fragment>,
         ],
         images: [],
       },

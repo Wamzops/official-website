@@ -27,19 +27,18 @@ export const Footer = () => {
 
         </Text>
         <Row gap="16">
-          {social.map(
-            (item) =>
-              item.link && (
-                <IconButton
-                  key={item.name}
-                  href={item.link}
-                  icon={item.icon}
-                  tooltip={item.name}
-                  size="s"
-                  variant="ghost"
-                />
-              ),
-          )}
+          {social
+            .filter((item) => item.link)
+            .map((item) => (
+              <IconButton
+                key={item.name}
+                href={item.link!}
+                icon={item.icon}
+                tooltip={item.name}
+                size="s"
+                variant="ghost"
+              />
+            ))}
         </Row>
       </Row>
       <Row height="80" hide s={{ hide: false }} />

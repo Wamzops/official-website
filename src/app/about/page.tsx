@@ -160,34 +160,29 @@ export default function About() {
                 data-border="rounded"
               >
                 {social
-                  .filter((item) => item.essential)
-                  .map(
-                    (item) =>
-                      item.link && (
-                        <React.Fragment key={item.name}>
-                          <Row s={{ hide: true }}>
-                            <Button
-                              key={item.name}
-                              href={item.link}
-                              prefixIcon={item.icon}
-                              label={item.name}
-                              size="s"
-                              weight="default"
-                              variant="secondary"
-                            />
-                          </Row>
-                          <Row hide s={{ hide: false }}>
-                            <IconButton
-                              size="l"
-                              key={`${item.name}-icon`}
-                              href={item.link}
-                              icon={item.icon}
-                              variant="secondary"
-                            />
-                          </Row>
-                        </React.Fragment>
-                      ),
-                  )}
+                  .filter((item) => item.essential && item.link)
+                  .map((item) => (
+                    <React.Fragment key={item.name}>
+                      <Row s={{ hide: true }}>
+                        <Button
+                          href={item.link!}
+                          prefixIcon={item.icon}
+                          label={item.name}
+                          size="s"
+                          weight="default"
+                          variant="secondary"
+                        />
+                      </Row>
+                      <Row hide s={{ hide: false }}>
+                        <IconButton
+                          size="l"
+                          href={item.link!}
+                          icon={item.icon}
+                          variant="secondary"
+                        />
+                      </Row>
+                    </React.Fragment>
+                  ))}
               </Row>
             )}
           </Column>
