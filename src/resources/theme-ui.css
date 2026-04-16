@@ -457,17 +457,7 @@
   line-height: 1.5;
 }
 
-/* =========================================================
-   Layout Containers — Docusaurus-style sticky sidebar
-   The PAGE scrolls. Sidebars are position:sticky.
-   No hardcoded heights. Works on all screen sizes.
-   ========================================================= */
 
-/* =========================================================
-   Layout Containers — Docusaurus-style fluid layout
-   The PAGE scrolls. Sidebars are position:sticky.
-   No hardcoded heights. Fully fluid width management.
-   ========================================================= */
 
 .doc-layout-root {
   display: flex;

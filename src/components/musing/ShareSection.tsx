@@ -108,9 +108,9 @@ export function ShareSection({ title, url }: ShareSectionProps) {
         Share this post:
       </Text>
       <Row data-border="rounded" gap="16" horizontal="center" wrap>
-        {enabledPlatforms.map((platform, index) => (
+        {enabledPlatforms.map((platform) => (
           <Button
-            key={index}
+            key={platform.name}
             variant="secondary"
             size="s"
             href={platform.generateUrl(title, url)}
