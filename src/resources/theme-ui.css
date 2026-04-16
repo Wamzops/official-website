@@ -475,8 +475,11 @@
   width: 100%;
   min-height: 100vh;
   position: relative;
-  /* Prevent horizontal blowout from any children */
-  overflow-x: hidden;
+}
+
+/* Hide global footer when in documentation layout */
+body:has(.doc-layout-root) .global-site-footer {
+  display: none !important;
 }
 
 /* ---- Left sidebar: sticky, hides on mobile ---- */
@@ -484,14 +487,15 @@
   width: var(--sidebar-width);
   flex-shrink: 0;
   position: sticky;
-  top: 0;
-  height: 100vh;
+  top: 6rem; /* Adjust for header + safety */
+  height: calc(100vh - 6.5rem); /* Adjust for header + space at bottom */
   overflow-y: auto;
   background: transparent;
   border-right: 1px solid var(--doc-border);
   scrollbar-width: thin;
   scrollbar-color: var(--doc-border) transparent;
   z-index: 10;
+  padding-bottom: 2rem;
 }
 
 @media (max-width: 996px) {
@@ -529,10 +533,11 @@
   width: var(--toc-width);
   flex-shrink: 0;
   position: sticky;
-  top: 0;
-  height: 100vh;
+  top: 6rem; /* Adjust for header */
+  height: calc(100vh - 6.5rem);
   overflow-y: auto;
   z-index: 10;
+  padding-bottom: 2rem;
 }
 
 @media (max-width: 1200px) {

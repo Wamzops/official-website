@@ -242,11 +242,7 @@ html, body {
   white-space: nowrap;
 }
 
-/* =========================================================
-   Mobile breakpoints
-   ========================================================= */
 
-/* Tablet (≤ 768px): stack filter + search vertically */
 @media (max-width: 768px) {
   .modern-filter-container {
     flex-direction: column;

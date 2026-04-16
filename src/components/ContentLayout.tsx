@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { ContentSidebar } from "@/components/ContentSidebar";
 import { DocTableOfContents } from "@/components/DocTableOfContents";
+import { Footer } from "@/components/Footer";
 import type { Heading, Post } from "@/components/types";
 import "@/resources/theme-ui.css";
 
@@ -132,6 +133,7 @@ export const ContentLayout: FC<ContentLayoutProps> = ({
 
             {/* Content wrapper */}
             <div className="doc-content">{children}</div>
+            <Footer />
           </div>
         </main>
 
