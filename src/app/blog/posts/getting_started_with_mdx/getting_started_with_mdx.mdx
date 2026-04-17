@@ -1,0 +1,307 @@
+---
+title: "Introduction to MDX — How To Create Interactive Documentation"
+description: "Learn how to create dynamic and interactive documentation with MDX, the Markdown + JSX format that brings your docs to life."
+author: "Colette Muiruri"
+order: 1
+---
+
+# Introduction to MDX — How To Create Interactive Documentation
+
+MDX stands for Markdown + JSX. It is an extension of Markdown that allows you to embed JavaScript code (JSX) directly into your Markdown documents. This combination enables you to create dynamic and interactive documentation while maintaining Markdown's simplicity.
+
+## Why Use MDX As A Technical Writer?
+
+As a technical writer, your job is to create documentation that helps users understand a product or tool. Interactive documentation is one way to create a good user experience, and MDX is an excellent tool for achieving this. Using MDX, you can create content that is engaging, dynamic and interactive.
+
+Some other reasons why you should use MDX include:
+
+- It enables seamless collaboration between developers and technical writers as they can both focus on code and content without interfering.
+- Easily embed interactive elements, like live code blocks, into your documentation to help improve user experience.
+- MDX allows you to create reusable components for common documentation elements, ensuring consistency across your documentation.
+- MDX can be used to create interactive API documentation with live request/response examples and automatically generated code samples in multiple languages.
+
+## Getting Started With MDX
+
+In order to utilize the full power of MDX as a tool for your documentation, here are some of the most important things you need to know beforehand:
+
+### Prerequisites
+
+- Node.js and npm (or yarn) installed
+- Understanding of Javascript and ReactJs
+- Knowledge of Markdown.
+
+## How to Set Up and Run MDX
+
+There are multiple ways to set up MDX, and it entirely depends on the choice of platform or framework you're using. MDX is widely supported across major documentation platforms and Static Site Generators, so as a technical writer, you may not need to do so much setup. Here's an overview of different approaches to integrating MDX into your projects:
+
+### 1. Using MDX in Docusaurus
+
+Docusaurus is an open-source framework built by Meta (Facebook) for creating documentation websites. It has built-in support for MDX, which means there's no need for additional setup. Run the commands below to set up your documentation site. Then, you can create a .mdx file in the docs or pages folder.
+
+```bash
+npx create-docusaurus@latest docs-site classic
+cd docs-site
+```
+
+Here are some little things to look out for when writing MDX in Docusaurus:
+
+- Using single-line comments will throw an error; instead, use JSX comments.
+  ```jsx
+  //This comment will throw error
+  {/* This is the correct way to make comment in MDX*/}
+  ```
+
+- For every component you write inside the .mdx file, you have to export it explicitly.
+
+  ```jsx
+  export const MyButton = () => (
+    <button onClick={() => alert('Hello, MDX!')}>Click Me!</button>
+  );
+
+  export const GreetingMessage = () => {
+    return (
+      <div>
+        Hello, This is another MDX component!
+      </div>
+    );
+  };
+  ```
+
+# Welcome to My MDX Page
+
+Some random **markdown** content.
+
+- If you're using external or shared components, make sure to import them correctly at the top of your MDX file.
+
+For more details on how to set up and configure Docusaurus, check out our article on Docusaurus.
+
+### 2. Using MDX in Next.JS
+
+Next.js is a React framework for building full-stack web applications. With a little extra setup, MDX can be used in Next.js applications.
+
+- Create a new Next.js project using the command below:
+  ```bash
+  npx create-next-app@latest MDX-demo
+  cd MDX-demo
+  ```
+
+- Install MDX dependencies
+  ```bash
+  npm install @next/mdx @mdx-js/loader @mdx-js/react
+  ```
+
+- Navigate into your next.config.js file and add support for MDX
+
+  ```js
+  const withMDX = require('@next/mdx')({
+    extension: /\.mdx?$/,
+  })
+  module.exports = withMDX({
+    pageExtensions: ['js', 'jsx', 'ts', 'tsx', 'md', 'mdx'],
+  })
+  ```
+
+  Alternatively, if your next.config file ends with .mjs instead of .js, which means you're using the ES Modules (ESM) syntax. Use this syntax instead.
+
+  ```js
+  // next.config.mjs
+  import withMDX from '@next/mdx';
+  const mdxConfig = withMDX({
+    extension: /\.mdx?$/,
+  });
+  export default {
+    ...mdxConfig,
+    pageExtensions: ['js', 'jsx', 'ts', 'tsx', 'md', 'mdx'],
+    // Additional Next.js configuration options
+  };
+  ```
+
+Now, create an MDX file in your src or pages folder, and you can start your developer server using this command:
+
+```bash
+npm run dev
+```
+
+### Other Ways to Run MDX
+
+- Gatsby
+- Vite
+- Astro (Built-in support for MDX)
+- Docz (Built-in support for MDX)
+
+For each of these setups, you'll typically need to:
+
+- Install the necessary dependencies
+- Configure your build tool or framework to process MDX files
+- Create .mdx files in your project
+- Import and use MDX components in your application
+
+## Use Cases of MDX
+
+There are different ways you can choose to use MDX in your documentation. Let's take a look at the basic ones.
+
+### Live Code Editor
+
+This is very useful for cases when you want your users to interact directly with the content in your documentation. It helps to keep them engaged and learn information faster.
+
+> **P.S.** If you're using Docusaurus, it has a built-in feature for a live code editor.
+
+```jsx
+const LiveEditor = () => {
+  const [code, setCode] = useState(`console.log('Hello, MDX!');`);
+  const [output, setOutput] = useState('');
+
+  const runCode = () => {
+    try {
+      // Capture console.log output
+      let logs = [];
+      const originalLog = console.log;
+      console.log = (...args) => {
+        logs.push(args.join(' '));
+        originalLog(...args);
+      };
+      new Function(code)();
+      console.log = originalLog;
+      setOutput(logs.join('\n'));
+    } catch (error) {
+      setOutput(`Error: ${error.message}`);
+    }
+  };
+
+  return (
+    <div style={{ border: '1px solid #ccc', padding: '1rem', borderRadius: '8px' }}>
+      <textarea
+        value={code}
+        onChange={(e) => setCode(e.target.value)}
+        rows={5}
+        cols={50}
+        style={{ width: '100%', fontFamily: 'monospace', marginBottom: '0.5rem' }}
+      />
+      <button onClick={runCode} style={{ marginBottom: '0.5rem' }}>Run Code</button>
+      {output && (
+        <pre style={{ background: '#f5f5f5', padding: '0.5rem', borderRadius: '4px' }}>
+          {output}
+        </pre>
+      )}
+    </div>
+  );
+};
+
+export default LiveEditor;
+```
+
+# Live Code Editor
+
+This is an MDX file that has a live code function in it. Test the live feature below:
+
+<LiveEditor />
+
+### Embedding Quizzes
+
+Create a component to hold your JavaScript logic.
+
+```jsx
+const Quiz = () => {
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [showResult, setShowResult] = useState(false);
+
+  const handleOptionChange = (event) => {
+    setSelectedOption(event.target.value);
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    setShowResult(true);
+  };
+
+  const resetQuiz = () => {
+    setSelectedOption(null);
+    setShowResult(false);
+  };
+
+  return (
+    <div style={{ border: '1px solid #ccc', padding: '1rem', borderRadius: '8px' }}>
+      <h3>Quiz: Which of these tools does NOT support MDX?</h3>
+      <form onSubmit={handleSubmit}>
+        <div>
+          <label>
+            <input
+              type="radio"
+              value="Docusaurus"
+              checked={selectedOption === 'Docusaurus'}
+              onChange={handleOptionChange}
+            />
+            Docusaurus
+          </label>
+        </div>
+        <div>
+          <label>
+            <input
+              type="radio"
+              value="Next.js"
+              checked={selectedOption === 'Next.js'}
+              onChange={handleOptionChange}
+            />
+            Next.js
+          </label>
+        </div>
+        <div>
+          <label>
+            <input
+              type="radio"
+              value="Gatsby"
+              checked={selectedOption === 'Gatsby'}
+              onChange={handleOptionChange}
+            />
+            Gatsby
+          </label>
+        </div>
+        <div>
+          <label>
+            <input
+              type="radio"
+              value="Jekyll"
+              checked={selectedOption === 'Jekyll'}
+              onChange={handleOptionChange}
+            />
+            Jekyll
+          </label>
+        </div>
+        <button type="submit">Submit</button>
+        <button type="button" onClick={resetQuiz} style={{ marginLeft: '0.5rem' }}>Try Again</button>
+      </form>
+
+      {showResult && (
+        <div style={{ marginTop: '1rem' }}>
+          {selectedOption === 'Jekyll' ? (
+            <p style={{ color: 'green' }}>Correct! Jekyll does not support MDX.</p>
+          ) : (
+            <p style={{ color: 'red' }}>Incorrect. The correct answer is Jekyll.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Quiz;
+```
+
+In your .mdx file, use the import statement at the top of the MDX file to bring in the Quiz component from the specified path. You can then use component directly within the MDX content, just like any other React component.
+
+```jsx
+import Quiz from "../component/quiz";
+
+# Hello from my MDX page
+
+This is an mdx file that contains quiz questions. Answer the question correctly.
+
+<Quiz />
+```
+
+<Quiz />
+
+## Conclusion
+
+MDX is a powerful tool for creating dynamic documentation. It offers more advantages than regular Markdown, as you can customize your documentation in different ways. As a technical writer, mastering MDX can enhance your ability to create engaging and informative content. Beyond the use cases covered in this article, there's a lot more you can achieve with MDX. This article covered the basics to help you get started. Be sure to check out the official documentation for further reading.
+

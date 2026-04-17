@@ -41,8 +41,8 @@ export const DocTableOfContents: FC<DocTableOfContentsProps> = ({ headings, onIt
     return () => observer.disconnect();
   }, [headings, moveTo]);
 
-  // Only show H2 headings in "On this page" (H1 = section nav, H3 = too granular)
-  const tocHeadings = headings.filter((h) => h.level === 2);
+  // Include H2 and H3 headings in "On this page"
+  const tocHeadings = headings.filter((h) => h.level === 2 || h.level === 3);
 
   if (!tocHeadings || tocHeadings.length === 0) return null;
 

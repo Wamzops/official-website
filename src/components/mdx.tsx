@@ -1,7 +1,9 @@
 import { MDXRemote, type MDXRemoteProps } from "next-mdx-remote/rsc";
 import type React from "react";
 import type { ReactNode } from "react";
-import { slugify as transliterate } from "transliteration";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import { slugify } from "@/utils/utils";
 
 import {
   Accordion,
@@ -27,6 +29,26 @@ import {
   Text,
   type TextProps,
 } from "@once-ui-system/core";
+
+import { LiveEditor } from "./mdx/LiveEditor";
+import { Quiz } from "./mdx/Quiz";
+import { 
+  LineChart, 
+  Line as RechartsLine, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer 
+} from './mdx/RechartsWrapper';
+import { 
+  QuickCheck1, 
+  QuickCheck2, 
+  QuickCheck3, 
+  OLSInteractive, 
+  FinalOLSQuiz 
+} from './mdx/LeastSquaresComponents';
 
 type CustomLinkProps = React.AnchorHTMLAttributes<HTMLAnchorElement> & {
   href: string;
@@ -86,13 +108,7 @@ function extractText(children: any): string {
   return "";
 }
 
-function slugify(str: string): string {
-  const strWithAnd = str.replace(/&/g, " and "); // Replace & with 'and'
-  return transliterate(strWithAnd, {
-    lowercase: true,
-    separator: "-", // Replace spaces with -
-  }).replace(/\-\-+/g, "-"); // Replace multiple - with single -
-}
+
 
 function createHeading(as: "h1" | "h2" | "h3" | "h4" | "h5" | "h6") {
   const CustomHeading = ({
@@ -138,7 +154,18 @@ function createCodeBlock(props: any) {
     // Extract language from className (format: language-xxx)
     const rawLanguage = className.replace("language-", "");
     const isText = rawLanguage === "text" || rawLanguage === "plaintext";
-    const language = isText ? "bash" : rawLanguage;
+    
+    // Mapping for common language aliases that Prism might not recognize directly
+    const languageMap: Record<string, string> = {
+      'js': 'javascript',
+      'py': 'python',
+      'sh': 'bash',
+      'yml': 'yaml',
+      'md': 'markdown',
+      'rb': 'ruby',
+    };
+
+    const language = isText ? "bash" : (languageMap[rawLanguage] || rawLanguage);
     const label = isText ? "Plain Text" : language.charAt(0).toUpperCase() + language.slice(1);
 
     return (
@@ -324,10 +351,18 @@ const Summary = ({ children, color, ...props }: any) => {
   );
 };
 
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
 
 const components = {
+  LiveEditor,
+  Quiz,
+  LineChart,
+  Line: RechartsLine,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
   details: Details,
   summary: Summary,
   Details,
@@ -369,6 +404,11 @@ const components = {
   Icon,
   Media,
   SmartLink,
+  QuickCheck1,
+  QuickCheck2,
+  QuickCheck3,
+  OLSInteractive,
+  FinalOLSQuiz,
 };
 
 type CustomMDXProps = MDXRemoteProps & {

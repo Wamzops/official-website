@@ -1,6 +1,15 @@
 import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
+import { slugify as transliterate } from "transliteration";
+
+export function slugify(str: string): string {
+  const strWithAnd = str.replace(/&/g, " and "); // Replace & with 'and'
+  return transliterate(strWithAnd, {
+    lowercase: true,
+    separator: "-", // Replace spaces with -
+  }).replace(/\-\-+/g, "-"); // Replace multiple - with single -
+}
 
 type Team = {
   name: string;
@@ -92,10 +101,7 @@ export function extractHeadings(content: string) {
   while ((match = headingRegex.exec(content)) !== null) {
       const level = match[1].length;
       const text = match[2].trim();
-      let slug = text
-          .toLowerCase()
-          .replace(/[^\w\s-]/g, '')
-          .replace(/\s+/g, '-');
+      let slug = slugify(text);
       
       if (slugCounts[slug] !== undefined) {
         slugCounts[slug]++;

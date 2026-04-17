@@ -1,0 +1,212 @@
+---
+title: "A 101 guide on least squares regression method"
+description: "An introduction to multiple linear regression using the classic mtcars dataset and sklearn."
+author: "Colette Muiruri"
+order: 1
+---
+
+# OLS Regression: The Key Ideas Explained
+
+**In this blog, we will explore the key ideas behind OLS regression and how to perform simple implementations in  Python.**
+
+
+
+## What is OLS Regression?
+
+Ordinary Least Squares (OLS) regression is a statistical method used to model the relationship between a dependent variable (often called the target or outcome) and one or more independent variables (predictors or features). The "ordinary least squares" name comes from the method to find the line (or hyperplane) that minimizes the sum of the squared vertical distances between the observed data points and the predicted values.
+
+<LineChart width={600} height={300} data={[
+  { x: 1, y: 2.1, predicted: 2 },
+  { x: 2, y: 3.8, predicted: 4 },
+  { x: 3, y: 6.2, predicted: 6 },
+  { x: 4, y: 7.9, predicted: 8 },
+  { x: 5, y: 10.5, predicted: 10 }
+]}>
+  <CartesianGrid strokeDasharray="3 3" />
+  <XAxis dataKey="x" label={{ value: 'X (Independent Variable)', position: 'insideBottom', offset: -5 }} />
+  <YAxis label={{ value: 'Y (Dependent Variable)', angle: -90, position: 'insideLeft' }} />
+  <Tooltip />
+  <Legend />
+  <Line type="monotone" dataKey="y" stroke="#8884d8" name="Actual Data" dot={{ r: 6 }} />
+  <Line type="monotone" dataKey="predicted" stroke="#82ca9d" name="OLS Regression Line" strokeDasharray="5 5" />
+</LineChart>
+<br>
+</br>
+
+That is quite the mouthful...
+<br>
+</br><br>
+</br>
+Math to the rescue!
+<br>
+</br>
+<br>
+</br>
+The mathematical formulation is straightforward. For a simple linear regression with one predictor:
+
+```
+Y = β₀ + β₁X + ε
+```
+
+Where:
+- **Y** is the dependent variable
+- **X** is the independent variable
+- **β₀** is the y-intercept (the value of Y when X = 0)
+- **β₁** is the slope (the change in Y for a one-unit change in X)
+- **ε** is the error term (the difference between observed and predicted values)
+ 
+ This probably sounds more familiar: 
+
+ <br>
+ </br>
+ 
+```
+Y = mx + c + ε (with the strange letter being an error term)
+```
+
+<br>
+</br>
+
+The OLS method finds the values of β₀ and β₁ that minimize the sum of squared residuals (errors):
+
+```
+min Σ(Yᵢ - Ŷᵢ)² = min Σ(Yᵢ - (β₀ + β₁Xᵢ))²
+```
+
+---
+---
+
+## Key Assumptions of OLS Regression
+
+For OLS regression to produce reliable estimates, several key assumptions should be met:
+
+1. **Linearity**: The relationship between the predictors and the outcome is linear.
+2. **Independence**: Observations are independent of each other.
+3. **Homoscedasticity**: The variance of the errors is constant across all levels of the independent variables.
+4. **Normality**: The errors are normally distributed (primarily important for small sample sizes).
+5. **No perfect multicollinearity**: In multiple regression, predictors should not be perfectly correlated with each other.
+
+---
+---
+
+## Implementing OLS Regression
+
+### Python Implementation with statsmodels
+
+```python interactive=true
+import pandas as pd
+import numpy as np
+import statsmodels.api as sm
+import matplotlib.pyplot as plt
+
+# Create sample data
+np.random.seed(42)
+X = np.linspace(0, 10, 50)
+y = 2.5 * X + np.random.normal(0, 2, 50)
+
+# Add constant term for intercept
+X_with_const = sm.add_constant(X)
+
+# Fit OLS model
+model = sm.OLS(y, X_with_const)
+results = model.fit()
+
+# Display results
+print(results.summary())
+```
+
+### R Implementation
+
+```r
+# Create sample data
+set.seed(42)
+X <- seq(0, 10, length.out = 50)
+y <- 2.5 * X + rnorm(50, 0, 2)
+
+# Fit linear model
+model <- lm(y ~ X)
+
+# Display results
+summary(model)
+```
+
+### Excel Implementation
+
+To perform OLS regression in Excel:
+1. Go to **Data** → **Data Analysis** → **Regression**
+2. Select your Y Range (dependent variable) and X Range (independent variable)
+3. Check **Labels** if your first row contains headers
+4. Choose output options and click **OK**
+
+---
+
+## Interactive OLS Simulator
+
+Adjust the slope and intercept to see how well the line fits the data points. Try to match the true underlying relationship (slope = 2.5, intercept = 0.5).
+
+<OLSInteractive />
+
+---
+
+## Evaluating Model Performance
+
+When you run an OLS regression, several key metrics help you evaluate how well your model fits the data:
+
+### R-squared (R²)
+
+R² measures the proportion of variance in the dependent variable that's explained by the independent variables. It ranges from 0 to 1, with higher values indicating better fit.
+
+### Adjusted R-squared
+
+Adjusted R² penalizes the addition of unnecessary predictors, making it useful for comparing models with different numbers of variables.
+
+### F-statistic
+
+The F-test evaluates whether your model as a whole is statistically significant. A low p-value (typically < 0.05) suggests that your predictors collectively have a meaningful relationship with the outcome.
+
+### Coefficient P-values
+
+For each predictor, the p-value tests whether the coefficient is significantly different from zero. Low p-values indicate that the predictor is statistically significant.
+
+---
+---
+
+## Limitations of OLS Regression
+
+While OLS regression is powerful, it has several limitations:
+
+1. **Sensitive to outliers**: Extreme values can disproportionately influence the regression line.
+2. **Assumes linearity**: Cannot capture complex nonlinear relationships without transformation.
+3. **Assumes independence**: Cannot handle time series data with autocorrelation without modification.
+4. **Prone to overfitting**: Including too many predictors can lead to models that fit the training data too closely.
+5. **Cannot handle missing data**: Requires complete cases or imputation.
+
+## When to Use Alternative Methods
+
+Consider these alternatives when OLS assumptions are violated:
+
+- **Ridge/Lasso Regression**: When you have many predictors or multicollinearity
+- **Logistic Regression**: When your outcome is binary
+- **Time Series Models (ARIMA, etc.)**: When your data has temporal dependencies
+- **Decision Trees/Random Forests**: When relationships are highly nonlinear
+- **Quantile Regression**: When you need to model different quantiles of the outcome distribution
+
+---
+
+---
+
+## Key Takeaways
+
+- **OLS regression finds the line that minimizes squared errors** between observed and predicted values
+- **The model assumes linearity, independence, homoscedasticity, and normality of errors**
+- **R-squared measures how well the model explains variance in the outcome**
+- **Always check your assumptions and consider alternatives when they're violated**
+- **Start simple**: Begin with basic models and gradually add complexity as needed
+
+## Learn More
+
+Ready to dive deeper? Check out these DataCamp courses:
+
+- [Introduction to Regression with statsmodels in Python](https://www.datacamp.com/courses/introduction-to-regression-with-statsmodels-in-python)
+- [Introduction to Regression in R](https://www.datacamp.com/courses/introduction-to-regression-in-r)
+- [Bayesian Regression Modeling with rstanarm](https://www.datacamp.com/courses/bayesian-regression-modeling-with-rstanarm)
