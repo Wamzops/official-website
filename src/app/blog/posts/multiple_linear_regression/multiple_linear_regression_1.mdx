@@ -1,0 +1,271 @@
+---
+title: "Multiple Linear Regression Part 1: Fitting a Model with sklearn"
+description: "An introduction to multiple linear regression using the classic mtcars dataset and sklearn."
+author: "Explore Data Science Academy"
+order: 1
+---
+
+# Multiple Linear Regression Part 1: Fitting a Model with `sklearn`
+
+© Explore Data Science Academy
+
+## Learning Objectives
+
+In this train you will learn how to:
+
+- Gain a basic understanding of multiple linear regression vs. simple linear regression;
+- Use the classic `mtcars` dataset in a multiple linear regression model;
+- Fit a multiple linear regression model in `sklearn`.
+
+## Outline
+
+We'll be moving through the following sections in order to achieve our objectives:
+
+- The `mtcars` dataset;
+- Modelling the fuel consumption of a car — `mpg`;
+- Fitting the Multivariate Regression Model;
+- Assessing Model Accuracy.
+
+---
+
+## Introduction
+
+In this train, we will learn how to fit a multiple linear regression model using `sklearn`. Recall that the simple linear regression equation is as follows:
+
+$$Y = \beta_{0} + \beta_{1}X_1$$
+
+where:
+
+- $\beta_{0}$ is the intercept, interpreted as the value of $Y$ when $X_1 = 0$;
+- $\beta_{1}$ is the coefficient, interpreted as the effect on $Y$ for a one unit increase in $X_1$; and
+- $X_1$ is the single predictor variable.
+
+Extending that idea to multiple linear regression is as simple as adding an $X_{j}$ and corresponding $\beta_{j}$ for each of the $p$ predictor variables, where $j$ is an element of the set $[1, p]$.
+
+Hence in multiple linear regression, our regression equation becomes:
+
+$$Y = \beta_0 + \beta_1X_1 + \beta_2X_2 + \ldots + \beta_pX_p$$
+
+where:
+
+- $Y$ is the response variable which depends on the $p$ predictor variables;
+- $\beta_0$ is the intercept, interpreted as the value of $Y$ when *all* predictor variables are equal to zero;
+- $\beta_j$ is the average effect on $Y$ of a one unit increase in $X_j$, assuming all other predictors are held fixed.
+
+---
+
+## The `mtcars` Dataset
+
+As usual, we need to import a few Python libraries:
+
+```python
+%matplotlib notebook
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from mpl_toolkits.mplot3d import Axes3D
+```
+
+Next we will load our data as a Pandas DataFrame. For this train we'll be using the famous `mtcars` dataset — an extract from the 1974 US *Motor Trend* magazine, which comprises fuel consumption and 10 aspects of automobile design and performance for 32 automobiles.
+
+```python
+df = pd.read_csv(
+    'https://raw.githubusercontent.com/Explore-AI/Public-Data/master/Data/regression_sprint/mtcars.csv',
+    index_col=0
+)
+df.head()
+```
+
+```python
+df.shape
+```
+
+We can see that the DataFrame contains multiple columns — 11 in total. Simple linear regression models integrate the use of a single predictor variable when fitting a model. While that seems easy to understand, the world is seldom as simple as that — real problems contain multiple variables and we need to take into account as many as we can.
+
+---
+
+## Modelling MPG
+
+Let's attempt to model the miles per gallon (`mpg`) rating of a car using its other characteristics. `mpg` is an intuitive response variable and we would expect it to be negatively impacted by things like a heavier car (`wt`), higher horsepower (`hp`), bigger engine displacement (`disp`), among other things.
+
+<Info>
+  In the next train, we'll be doing regression again but using a different module known as `statsmodels`, which will help us gain deeper insight into the statistical correctness of the model.
+</Info>
+
+To get a better idea of what a multi-dimensional dataset looks like, we'll generate a 3D scatter plot showing `mpg` on the *z*-axis (height), with two predictor variables, `cyl` and `wt` on the *x*- and *y*-axes:
+
+```python
+# create figure and 3D axes
+fig = plt.figure(figsize=(8, 7))
+ax = fig.add_subplot(111, projection='3d')
+
+# set axis labels
+ax.set_zlabel('MPG')
+ax.set_xlabel('No. of Cylinders')
+ax.set_ylabel('Weight (1000 lbs)')
+
+# scatter plot with response variable and 2 predictors
+ax.scatter(df['cyl'], df['wt'], df['mpg'])
+```
+
+We know that in simple linear regression (2D), any model that we fit to data manifests as a straight line. Extending this idea to 3D, the line becomes a **plane** — a flat surface chosen to minimise the squared vertical distances between each observation and the plane, as shown in the figure below from ISLR:
+
+![3D regression plane from ISLR](https://github.com/Explore-AI/Public-Data/raw/master/3D%20regression%20ISLR.jpg)
+
+The result of a multivariate linear regression in higher dimensionality is known as a **hyperplane** — similar to the flat surface above, but in a $p$-dimensional space where $p > 3$. Humans lack the ability to visualise any number of dimensions greater than three, so we have to be content with the idea that a hyperplane in $p$-dimensional space is effectively like a flat surface in 3-dimensional space.
+
+---
+
+## Fitting the Multivariate Regression Model
+
+In `sklearn`, fitting a multiple linear regression model is much the same as fitting a simple linear regression. This time, our $X$ contains multiple columns, where it only contained one before.
+
+```python
+# import regression module
+from sklearn.linear_model import LinearRegression
+
+# split predictors and response
+X = df.drop(['mpg'], axis=1)
+y = df['mpg']
+```
+
+```python
+# create model object
+lm = LinearRegression()
+```
+
+```python
+# import train/test split module
+from sklearn.model_selection import train_test_split
+```
+
+```python
+# split into train and test
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.20,
+    random_state=1
+)
+```
+
+```python
+# train model
+lm.fit(X_train, y_train)
+```
+
+Having fit our model to the training data, we can now inspect its coefficients to get a better understanding of their influence on the model's predictions:
+
+```python
+# extract model intercept
+beta_0 = float(lm.intercept_)
+```
+
+```python
+# extract model coefficients
+beta_js = pd.DataFrame(lm.coef_, X.columns, columns=['Coefficient'])
+```
+
+```python
+print("Intercept:", beta_0)
+```
+
+```python
+beta_js
+```
+
+Let's see what our model looks like in a few 2-dimensional plots, plotting `wt`, `disp`, `cyl`, and `hp` vs. `mpg` respectively (top-left to bottom-right):
+
+```python
+fig, axs = plt.subplots(2, 2, figsize=(9, 7))
+
+axs[0, 0].scatter(df['wt'], df['mpg'])
+axs[0, 0].plot(df['wt'], lm.intercept_ + lm.coef_[4] * df['wt'], color='red')
+axs[0, 0].title.set_text('Weight (wt) vs. mpg')
+
+axs[0, 1].scatter(df['disp'], df['mpg'])
+axs[0, 1].plot(df['disp'], lm.intercept_ + lm.coef_[1] * df['disp'], color='red')
+axs[0, 1].title.set_text('Engine displacement (disp) vs. mpg')
+
+axs[1, 0].scatter(df['cyl'], df['mpg'])
+axs[1, 0].plot(df['cyl'], lm.intercept_ + lm.coef_[0] * df['cyl'], color='red')
+axs[1, 0].title.set_text('Number of cylinders (cyl) vs. mpg')
+
+axs[1, 1].scatter(df['hp'], df['mpg'])
+axs[1, 1].plot(df['hp'], lm.intercept_ + lm.coef_[2] * df['hp'], color='red')
+axs[1, 1].title.set_text('Horsepower (hp) vs. mpg')
+
+fig.tight_layout(pad=3.0)
+plt.show()
+```
+
+It looks as if some of the predictors have been somewhat correctly modelled by the regression. Others, like `disp` in the top-right, are nowhere near.
+
+---
+
+## Assessing Model Accuracy
+
+Let's assess the fit of our multivariate model. For the purpose of a rudimentary comparison, let's measure model accuracy against a simple linear regression model which uses only `disp` as a predictor variable for `mpg`.
+
+```python
+# comparison linear model
+slr = LinearRegression()
+slr.fit(X_train[['disp']], y_train)
+```
+
+```python
+from sklearn import metrics
+import math
+```
+
+```python
+# dictionary of results
+results_dict = {
+    'Training MSE': {
+        "SLR": metrics.mean_squared_error(y_train, slr.predict(X_train[['disp']])),
+        "MLR": metrics.mean_squared_error(y_train, lm.predict(X_train))
+    },
+    'Test MSE': {
+        "SLR": metrics.mean_squared_error(y_test, slr.predict(X_test[['disp']])),
+        "MLR": metrics.mean_squared_error(y_test, lm.predict(X_test))
+    },
+    'Test RMSE': {
+        "SLR": math.sqrt(metrics.mean_squared_error(y_test, slr.predict(X_test[['disp']]))),
+        "MLR": math.sqrt(metrics.mean_squared_error(y_test, lm.predict(X_test)))
+    }
+}
+```
+
+We have included a *Test RMSE* column, which is simply the square root of the *Test MSE*:
+
+
+
+Where $y_i$ are the actual target values for a dataset with $N$ datapoints, and $\hat{y_i}$ represent our corresponding predictions.
+
+<Info>
+  RMSE is a more intuitive metric than MSE because it is in the same units as the variable being predicted. For instance, MSE would be measured in units of $mpg^2$, whereas RMSE is measured in the same units as $mpg$.
+</Info>
+
+```python
+# create dataframe from dictionary
+results_df = pd.DataFrame(data=results_dict)
+```
+
+```python
+results_df
+```
+
+Clearly the multiple linear regression model performed a lot better than using just `disp` to try and predict `mpg`.
+
+---
+
+## Conclusion
+
+In this train we have seen or been introduced to:
+
+- The `mtcars` dataset;
+- Using `sklearn` to perform multiple linear regression;
+- Using mean squared error and root mean squared error to measure model accuracy on unseen data.
+
+In future trains, we will look at methods for further evaluating the quality of our model.

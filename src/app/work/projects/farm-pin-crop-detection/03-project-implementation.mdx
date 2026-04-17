@@ -3,3 +3,699 @@ title: "Project Implementation"
 order: 3
 ---
 
+
+
+
+This notebook processes Sentinel-2 satellite imagery for crop type classification in the Orange River region. The pipeline integrates data ingestion, cloud masking, feature extraction (NDVI, Euclidean norm, spatio-temporal features), and label rasterization using the **EO‑learn** framework. 
+<br>
+</br>
+
+In this blog, I will explain each step, and provide the scientific rationale for the chosen methods. 
+<br>
+</br>
+
+<br>
+</br>
+To quickly jump into the code, you can view it [here](https://colab.research.google.com/drive/17lfZOrwLvMATENUJ8rrWLIV8COtTrJVg?usp=sharing)
+
+<br>
+</br>
+
+<br>
+</br>
+```python
+import numpy as np
+from scipy import stats
+import pandas as pd
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+from pathlib import Path
+from enum import Enum
+from tqdm import tqdm
+from contextlib import contextmanager
+import geopandas as gpd
+from shapely.geometry import Polygon
+import rasterio
+from rasterio import Affine, MemoryFile
+from rasterio.enums import Resampling
+from sentinelhub import BBoxSplitter, BBox, CRS, CustomUrlParam
+from eolearn.core import EOTask, EOPatch, LinearWorkflow, FeatureType, OverwritePermission, LoadFromDisk, SaveToDisk, EOExecutor
+from eolearn.io import S2L1CWCSInput, ExportToTiff
+from eolearn.io.local_io import *
+from eolearn.mask import AddCloudMaskTask, get_s2_pixel_cloud_detector, AddValidDataMaskTask
+from eolearn.mask.utilities import resize_images
+from eolearn.geometry import VectorToRaster, PointSamplingTask, ErosionTask
+from eolearn.features import LinearInterpolation, SimpleFilterTask, InterpolationTask, ValueFilloutTask, \
+    HaralickTask, AddMaxMinNDVISlopeIndicesTask, AddMaxMinTemporalIndicesTask, AddSpatioTemporalFeaturesTask, \
+    HOGTask, MaxNDVICompositing, LocalBinaryPatternTask
+
+
+data_path     = Path('../data')
+sentinel_path = data_path/'sentinel'
+output_path   = Path('output')
+shape_path    = output_path/'shapes'
+patch_path    = output_path/'patches'
+feature_path  = output_path/'features'
+shape_path.mkdir(exist_ok=True, parents=True)
+patch_path.mkdir(exist_ok=True, parents=True)
+feature_path.mkdir(exist_ok=True, parents=True)
+```
+
+The imports above cover the entire earth observation project. A standout library used in this workflow is the EO learn library that makes extraction of valuable information from satellite imagery as easy as defining a sequesnce of operations to be performed  on the imagery. 
+<br>
+</br><br>
+</br>
+<Info color="#facc15" opacity="0.1">
+    The sequence itself involves:
+    - Loading the satellite imagery
+    - Cloud detection and masking
+    - Feature extraction (NDWI, Euclidean norm, spatio-temporal features)
+    - Label rasterization or vectorization
+    - Saving of the results to the database
+</Info>
+<br>
+</br>
+
+The next step is to separate the directories in order to organise raw Sentinel‑2 data, intermediate EOPatches, shapefiles, and extracted features. This structure facilitates reproducibility and avoids overwriting outputs. The use of Path ensures cross‑platform compatibility.
+
+```python
+train_test_gpdf = gpd.read_file(data_path/'train_test_shp')
+orange_river_crs = CRS.UTM_34S
+train_test_gpdf = train_test_gpdf.to_crs(crs={'init': CRS.ogc_string(orange_river_crs)})
+```
+ The shape file contains the area of interest, which in this case is the Orange river region. The shape file is already provided [here](https://zindi.africa/competitions/farm-pin-crop-detection-challenge). We will use this shapefile later within the notebook to clip the sentinel-2 data in order to reduce the amount of data to be processed.
+ <br>
+</br>
+ <br>
+</br>
+  Reprojection to UTM zone 34S (EPSG:32734) is essential because Sentinel‑2 data is typically delivered in UTM, and all subsequent geometric operations (buffer, grid splitting, rasterisation) must be performed in a projected coordinate system to preserve distances and areas
+
+```python
+bbox_splitter = BBoxSplitter([orange_river], orange_river_crs, (6,5)) # 6 x 5 gives roughly square boxes
+
+bbox_list = np.array(bbox_splitter.get_bbox_list())
+info_list = np.array(bbox_splitter.get_info_list())
+
+# Create patchIDs
+patchIDs = []
+for idx, [bbox, info] in enumerate(zip(bbox_list, info_list)):
+    patchIDs.append(idx)
+    
+# Prepare info of selected EOPatches
+geometry = [Polygon(bbox.get_polygon()) for bbox in bbox_list[patchIDs]]
+idxs_x = [info['index_x'] for info in info_list[patchIDs]]
+idxs_y = [info['index_y'] for info in info_list[patchIDs]]
+
+gdf = gpd.GeoDataFrame({'index_x': idxs_x, 'index_y': idxs_y}, 
+                       crs={'init': CRS.ogc_string(orange_river_crs)}, 
+                       geometry=geometry)
+
+# save to shapefile
+shapefile_name = shape_path/'selected_orange_river_bboxes.shp'
+gdf.to_file(shapefile_name)
+
+```
+A 400 m buffer around the union of all polygons ensures that all pieces of land with crops are completely covered, avoiding edge effects. The bounding box is split into a 6 × 5 grid, producing roughly square tiles that match the processing capacity of EO‑learn and simplify parallelisation. Saving the grid as a shapefile allows visual inspection and reuse.
+<br>
+</br>
+<br>
+</br>
+
+```python
+
+# use context manager so DatasetReader and MemoryFile get cleaned up automatically
+@contextmanager
+def resample_raster(raster, size):
+    t = raster.transform
+    
+    scale = size//raster.height
+
+    # rescale the metadata
+    transform = Affine(t.a / scale, t.b, t.c, t.d, t.e / scale, t.f)
+    height = raster.height * scale
+    width = raster.width * scale
+
+    profile = raster.profile
+    profile.update(transform=transform, driver='GTiff', height=height, width=width)
+
+    data = raster.read( # Note changed order of indexes, arrays are band, row, col order not row, col, band
+            out_shape=(raster.count, height, width, ),
+            resampling=Resampling.bilinear,
+        )
+
+    with MemoryFile() as memfile:
+        with memfile.open(**profile) as dataset: # Open as DatasetWriter
+            dataset.write(data)
+            del data
+
+        with memfile.open() as dataset:  # Reopen as DatasetReader
+            yield dataset  # Note yield not return     
+
+class ImportFromJP2(BaseLocalIo):
+   
+    def __init__(self, feature, folder=None, *, timestamp_size=None, **kwargs):
+      
+        super().__init__(feature, folder=folder, **kwargs)
+
+        self.timestamp_size = timestamp_size
+        self.no_data_value  = np.nan
+
+    @staticmethod
+    def _get_reading_window(width, height, data_bbox, eopatch_bbox):
+        """ Calculates a window in pixel coordinates for which data will be read from an image
+        """
+        if eopatch_bbox.crs is not data_bbox.crs:
+            eopatch_bbox = eopatch_bbox.transform(data_bbox.crs)
+
+        # The following will be in the future moved to sentinelhub-py
+        data_ul_x, data_lr_y = data_bbox.lower_left
+        data_lr_x, data_ul_y = data_bbox.upper_right
+
+        res_x = abs(data_ul_x - data_lr_x) / width
+        res_y = abs(data_ul_y - data_lr_y) / height
+
+        ul_x, lr_y = eopatch_bbox.lower_left
+        lr_x, ul_y = eopatch_bbox.upper_right
+
+        # If these coordinates wouldn't be rounded here, rasterio.io.DatasetReader.read would round
+        # them in the same way
+        top = round((data_ul_y - ul_y) / res_y)
+        left = round((ul_x - data_ul_x) / res_x)
+        bottom = round((data_ul_y - lr_y) / res_y)
+        right = round((lr_x - data_ul_x) / res_x)
+
+        return (top, bottom), (left, right)
+    
+    def execute(self, eopatch=None, *, fn_exp='../**/*B*.jp2'):
+
+        feature_type, feature_name = next(self.feature())
+        if eopatch is None:
+            eopatch = EOPatch()
+
+            
+        #get jp2 files matching filename expression
+        jp2_files = [[*f.stem.split('_'),f] for f in self.folder.glob(fn_exp)]
+        jp2_df = pd.DataFrame(jp2_files)
+        jp2_df.columns = ['tile','date','band','filename']
+        
+        
+        band_order = {
+                        'B01':0,
+                        'B02':1,
+                        'B03':2,
+                        'B04':3,
+                        'B05':4,
+                        'B06':5,
+                        'B07':6,
+                        'B08':7,
+                        'B8A':8,
+                        'B09':9,
+                        'B10':10,
+                        'B11':11,
+                        'B12':12
+                    }
+
+        jp2_df['band_order'] = jp2_df.band.map(band_order)
+
+        jp2_df.sort_values(by=['date','tile','band_order'],inplace=True)
+        
+        dates = jp2_df.date.unique()
+        tiles = jp2_df.tile.unique()
+        bands = list(band_order.keys())
+        
+        date_data_list = list() #list to hold data for each date
+        #iterate through all files and add data
+        for date in dates:
+            bands_data_list = list() #list to hold data for each band
+            for band in bands:
+                tile_data_list = list()
+                for tile in tiles:
+                    filename_series = jp2_df[(jp2_df.date==date)
+                                     &(jp2_df.band==band)
+                                     &(jp2_df.tile==tile)].filename
+                    if len(filename_series) > 0:
+                        filename=filename_series.values[0]
+                    else: continue
+                    with rasterio.open(filename) as source:
+                        with resample_raster(source, size = 10980) as resampled:
+
+                            data_bbox = BBox(resampled.bounds, CRS(resampled.crs.to_epsg()))
+                            
+                            if rasterio.coords.disjoint_bounds(rasterio.coords.BoundingBox(*data_bbox), 
+                                                               rasterio.coords.BoundingBox(*eopatch.bbox)):
+                                continue
+
+                            reading_window = self._get_reading_window(
+                                resampled.width, resampled.height, data_bbox, eopatch.bbox)
+
+                            data = resampled.read(window=reading_window, boundless=True, 
+                                                  fill_value=self.no_data_value)
+                            
+                            if self.image_dtype is not None:
+                                data = data.astype(self.image_dtype)
+                                
+                            tile_data_list.append(data)
+
+                #Choose the values from the non-zero tile or average the two sets of non-zero value
+                
+                if len(tile_data_list) > 1:
+                    merged_tile_data = np.where((tile_data_list[0]!=0) & (tile_data_list[1]!=0),
+                                            (tile_data_list[0]+tile_data_list[1])/2,
+                                            np.where(tile_data_list[0]==0, tile_data_list[1], tile_data_list[0])
+                                           )
+                else:
+                    merged_tile_data = tile_data_list[0]
+
+                bands_data_list.append(merged_tile_data.squeeze())
+                    
+            date_data_list.append(np.stack(bands_data_list,axis=-1))
+        
+        data = np.stack(date_data_list,axis=0)
+        eopatch[feature_type][feature_name] = data/10000
+        eopatch.timestamp = dates.tolist()
+        
+        meta_info= {
+            'service_type': 'wcs',
+            'size_x': '10m',
+            'size_y': '10m'
+          }
+        
+        eopatch.meta_info = meta_info
+
+        return eopatch
+
+
+```
+Sentinel‑2 Level‑1C data is delivered as [JPEG‑2000 files per band and tile](https://sentiwiki.copernicus.eu/web/s2-products). This custom task:
+
+- Resamples all bands to a common spatial resolution (10 m, the native resolution of most bands) using bilinear resampling, which is adequate for subsequent pixel‑wise classification.
+
+- Handles tile boundaries by averaging overlapping pixels (naïve but effective for this region).
+
+- Normalises digital numbers to reflectance (divide by 10000) as per Sentinel‑2 specifications.
+
+Reference: Drusch, M., et al. (2012). Sentinel‑2: ESA’s Optical High‑Resolution Mission for GMES Operational Services. Remote Sensing of Environment, 120, 25–36.
+
+This next step involves the calculation of NDVI and Euclidean norm from the Sentinel-2 data.
+<br>
+</br>
+<br>
+</br>
+```python
+class SentinelHubValidData:
+    """
+    Combine Sen2Cor's classification map with `IS_DATA` to define a `VALID_DATA_SH` mask
+    The SentinelHub's cloud mask is asumed to be found in eopatch.mask['CLM']
+    """
+    def __call__(self, eopatch):        
+        return np.logical_not(eopatch.mask['CLM'].astype(np.bool))
+    
+class NormalizedDifferenceIndex(EOTask):   
+    """
+    The tasks calculates user defined Normalised Difference Index (NDI) between two bands A and B as:
+    NDI = (A-B)/(A+B).
+    """
+    def __init__(self, feature_name, band_a, band_b):
+        self.feature_name = feature_name
+        self.band_a_fetaure_name = band_a.split('/')[0]
+        self.band_b_fetaure_name = band_b.split('/')[0]
+        self.band_a_fetaure_idx = int(band_a.split('/')[-1])
+        self.band_b_fetaure_idx = int(band_b.split('/')[-1])
+        
+    def execute(self, eopatch):
+        band_a = eopatch.data[self.band_a_fetaure_name][..., self.band_a_fetaure_idx]
+        band_b = eopatch.data[self.band_b_fetaure_name][..., self.band_b_fetaure_idx]
+        
+        ndi = (band_a - band_b) / (band_a  + band_b)
+        
+        eopatch.add_feature(FeatureType.DATA, self.feature_name, ndi[..., np.newaxis])
+        
+        return eopatch
+
+    
+class EuclideanNorm(EOTask):   
+    """
+    The tasks calculates Euclidian Norm of all bands within an array:
+    norm = sqrt(sum_i Bi**2),
+    where Bi are the individual bands within user-specified feature array.
+    """
+    def __init__(self, feature_name, in_feature_name):
+        self.feature_name = feature_name
+        self.in_feature_name = in_feature_name
+    
+    def execute(self, eopatch):
+        arr = eopatch.data[self.in_feature_name]
+        norm = np.sqrt(np.sum(arr**2, axis=-1))
+        
+        eopatch.add_feature(FeatureType.DATA, self.feature_name, norm[..., np.newaxis])
+        return eopatch
+```
+
+
+NDVI (Normalised Difference Vegetation Index) is a standard proxy for vegetation greenness and biomass, widely used in crop classification (Rouse et al., 1974). It highlights photosynthetically active vegetation.
+<br>
+</br>
+<br>
+</br>
+Euclidean norm (spectral magnitude) captures overall brightness and can help separate bare soil from vegetation; it is a simple but effective feature for machine learning models.
+ <br>
+</br>
+ <br>
+</br>
+The NVDI is used because it correlates strongly with photosynthetuc activity and is therefore a powerful physical indicator that can be used by the classification model.
+ <br>
+</br>
+The NVDI role, however, can be substituted with other variables such as NDWI, NDMI or SAVI (soil adjusted vegetation index) depending on the crop type and the region of interest.
+ <br>
+</br>
+ <br>
+</br>
+The Euclidean norm is used to capture the overall brightness of the pixel and can help to separate bare soil from vegetation.
+  <br>
+</br> <br>
+</br>
+Reference: Rouse, J. W., Haas, R. H., Schell, J. A., & Deering, D. W. (1974). Monitoring vegetation systems in the Great Plains with ERTS. NASA SP‑351, 309–317.
+ <br>
+</br> <br>
+</br>
+The above code also takes the cloud mask produced by the sentinel-2 cloud detector and inverts it to create a valid data mask. The data mask is then used in later parts of the notebook to filter out invalid pixels so that the training only uses cloud free observations. This step also helps to prevent the model from learning from corrupted information containing artifacts from the cloud. 
+
+```python
+
+# Read in all available bands from disk
+add_data = ImportFromJP2(feature=[
+    (FeatureType.DATA, 'BANDS')
+], folder=sentinel_path)
+
+# TASK FOR CLOUD INFO
+# cloud detection is performed at 80m resolution 
+# and the resulting cloud probability map and mask 
+# are scaled to EOPatch's resolution
+cloud_classifier = get_s2_pixel_cloud_detector(average_over=2, dilation_size=1, all_bands=True)
+add_clm = AddCloudMaskTask(cloud_classifier, 'BANDS', cm_size_y='80m', cm_size_x='80m', 
+                           cmask_feature='CLM', # cloud mask name
+                           cprobs_feature='CLP' # cloud prob. map name
+                          )
+
+# TASKS FOR CALCULATING NEW FEATURES
+# NDVI: (B8a - B04)/(B8a + B04)
+# NORM: sqrt(B01^2 + B02^2 + ... + B12^2)
+ndvi = NormalizedDifferenceIndex('NDVI', 'BANDS/8', 'BANDS/3')
+norm = EuclideanNorm('NORM','BANDS')
+
+# TASK FOR VALID MASK
+# validate pixels using SentinelHub's cloud detection mask and region of acquisition 
+add_sh_valmask = AddValidDataMaskTask(SentinelHubValidData(), 
+                                      'VALID_DATA' # name of output mask
+                                     )
+#Tasks for spatio temporal features
+max_min_b4_idx = AddMaxMinTemporalIndicesTask(data_feature='BANDS', 
+                                              data_index=3, 
+                                              amax_data_feature='ARGMAX_B4', 
+                                              amin_data_feature='ARGMIN_B4')
+max_min_ndvi_idx = AddMaxMinTemporalIndicesTask(data_feature='NDVI')
+max_min_ndvi_slope_idx = AddMaxMinNDVISlopeIndicesTask()
+spatio_temp_feat = AddSpatioTemporalFeaturesTask(data_feature='BANDS')
+
+```
+
+Cloud masking is critical for optical time series; the Sentinel‑2 cloud detector (Hollstein et al., 2016) uses multi‑spectral thresholds and is implemented in s2cloudless.
+
+Temporal indices (max/min of B4 and NDVI) capture phenological stages – e.g., the date of maximum NDVI corresponds to peak greenness, useful for distinguishing crops with different growing cycles.
+
+Spatio‑temporal features (e.g., local binary patterns, Haralick textures) encode neighbourhood information and temporal trends, which significantly improve classification accuracy when combined with spectral features (Belgiu & Drăguţ, 2016).
+
+
+```python
+class LULC(Enum):
+    NO_DATA        = (0,  'No Data',          'black')
+    COTTON         = (1,  'Cotton',           'xkcd:lime')
+    # ... other classes
+
+land_cover_data = gpd.read_file(land_cover_path)
+land_cover_data.to_crs({'init': 'EPSG:32734'}, inplace=True)
+land_cover_data['Crop_Id_Ne'] = land_cover_data.Crop_Id_Ne.astype('int')
+rasterization_task = VectorToRaster(land_cover_data, (FeatureType.MASK_TIMELESS, 'LULC'),
+                                    values_column='Crop_Id_Ne', raster_shape=(FeatureType.MASK, 'VALID_DATA'),
+                                    raster_dtype=np.uint8)
+```
+
+
+The vector polygons (field boundaries) are rasterised to create a pixel‑wise ground truth mask. The VectorToRaster task aligns the label grid exactly with the feature grids, enabling supervised pixel‑based classification. Using VALID_DATA as reference shape guarantees that only valid pixels receive labels.
+
+```python
+workflow = LinearWorkflow(
+    add_data,
+    
+    add_clm,
+    add_sh_valmask,
+    
+    ndvi,
+    norm,
+    
+    max_min_b4_idx,
+    max_min_ndvi_idx,
+    max_min_ndvi_slope_idx,
+    spatio_temp_feat,
+    
+    rasterization_task,
+    
+    save
+
+
+    # Execute the workflow
+time_interval = ['2017-01-01', '2017-08-20'] # time interval for the SH request
+
+# define additional parameters of the workflow
+execution_args = []
+for idx, bbox in enumerate(bbox_list[patchIDs]):
+    execution_args.append({
+        add_data:{'eopatch': EOPatch(bbox=bbox)},
+        save: {'eopatch_folder': f'eopatch_{idx}'}
+    });
+1
+)
+
+```
+
+The above code is then to execute the workflow for each patch. This will result in a folder for each patch containing the processed data.
+
+The data can then be used  to train a Machine Learning Workflow to predice the crop types.
+
+## Visualization of the processed imagery
+
+The following outputs the indices for arranging the tiles.
+
+```python
+indexes = [[ 0,  1,  4],
+                   [ 3,   7],
+                   [ 2,   6], 
+                        [ 5,  9, 11],
+                            [ 8, 10]]
+
+places  = [[ 1,  2,  3],
+                   [ 9,  10],
+                   [15,  16], 
+                        [22, 23, 24],
+                            [29, 30]]
+```
+
+```python
+
+fig = plt.figure(figsize=(20*6/5, 20))
+k=0
+
+date_idx=9
+
+for i,  (idxs, plc) in enumerate(zip(indexes, places)):
+    for j, (idx, p) in enumerate(zip(idxs, plc)):
+        k=k+1
+        eopatch = EOPatch.load(patch_path/f'eopatch_{idx}', lazy_loading=True)
+        ax = plt.subplot(5, 6, p)
+        plt.imshow(np.clip(eopatch.data['BANDS'][date_idx][..., [2, 1, 0]] * 3.5, 0, 1))
+        plt.xticks([])
+        plt.yticks([])
+        ax.set_aspect("auto")
+        del eopatch
+        
+fig.suptitle('Visible spectrum at single timepoint', y=0.93, size=20)
+
+fig.subplots_adjust(wspace=0, hspace=0)
+
+```
+
+The above code is then used to plot the sprectrum at a particular date.
+The output is the image below :
+
+
+![Alt Text](/images/projects/project-02/image_1.png)
+
+
+
+In order to take a closer look at the patch, run the following code:
+
+```python
+
+fig = plt.figure(figsize=(20,20))
+eopatch = EOPatch.load(patch_path/f'eopatch_6', lazy_loading=True)
+plt.imshow(np.clip(eopatch.data['BANDS'][date_idx][..., [2, 1, 0]] * 3.5, 0, 1))
+plt.xticks([])
+plt.yticks([])
+
+fig.suptitle('Visible spectrum at single timepoint', y=0.93, size=20)
+del eopatch
+
+```
+
+The output is the image below:
+
+
+![Alt Text](/images/projects/project-02/image_2.png)
+
+The following code is used to look at the cloud probability and the cloud masks:
+
+```python
+eopatch = EOPatch.load(patch_path/f'eopatch_11', lazy_loading=True)
+
+plt.figure(figsize=(20,8))
+
+ax = plt.subplot(1, 3, 1)
+plt.imshow(np.clip(eopatch.data['BANDS'][9][..., [2, 1, 0]] * 3.5, 0, 1))
+ax.set_title('Visible Spectrum', size=18)
+plt.xticks([])
+plt.yticks([])
+
+ax = plt.subplot(1, 3, 2)
+plt.imshow(np.clip(eopatch.data['BANDS'][9][..., [2, 1, 0]] * 3.5, 0, 1))
+plt.imshow(eopatch.data['CLP'][9].squeeze(),alpha =0.5)
+ax.set_title('Cloud Probabilities', size=18)
+plt.xticks([])
+plt.yticks([])
+
+ax = plt.subplot(1, 3, 3)
+plt.imshow(eopatch.mask['CLM'][9].squeeze())
+ax.set_title('Cloud Mask', size=18)
+plt.xticks([])
+plt.yticks([])
+
+del eopatch
+
+```
+
+The output image is as below:
+
+![Alt Text](/images/projects/project-02/image_3.png)
+
+In order to plot the average NVDI:
+
+```python
+fig = plt.figure(figsize=(20*6/5, 20))
+k=0
+
+date_idx=9
+
+for i,  (idxs, plc) in enumerate(zip(indexes, places)):
+    for j, (idx, p) in enumerate(zip(idxs, plc)):
+        k=k+1
+        eopatch = EOPatch.load(patch_path/f'eopatch_{idx}', lazy_loading=True)
+        ax = plt.subplot(5, 6, p)
+        im = plt.imshow(np.clip(np.nanmean(eopatch.data['NDVI'],axis=0).squeeze(), 0, 0.8), cmap=plt.get_cmap('YlGn'))
+        plt.xticks([])
+        plt.yticks([])
+        ax.set_aspect("auto")
+        del eopatch
+
+fig.subplots_adjust(wspace=0, hspace=0)
+fig.suptitle('Average NDVI over time', y=0.93, size=20)
+
+cb = fig.colorbar(im, ax=fig.axes, orientation='horizontal', pad=0.01, aspect=100)
+cb.ax.tick_params(labelsize=20)
+plt.show()
+
+```
+
+The output image is as below:
+
+
+![Alt Text](/images/projects/project-02/image_4.png)
+
+
+
+Plot the raster mask:
+
+```python
+
+fig = plt.figure(figsize=(20*6/5, 20))
+k=0
+
+date_idx=9
+
+for i,  (idxs, plc) in enumerate(zip(indexes, places)):
+    for j, (idx, p) in enumerate(zip(idxs, plc)):
+        k=k+1
+        eopatch = EOPatch.load(patch_path/f'eopatch_{idx}', lazy_loading=True)
+        ax = plt.subplot(5, 6, p)
+        im = ax.imshow(eopatch.mask_timeless['LULC'].squeeze(), cmap=lulc_cmap, norm=lulc_norm)
+        plt.xticks([])
+        plt.yticks([])
+        ax.set_aspect("auto")
+        del eopatch
+
+fig.subplots_adjust(wspace=0, hspace=0)
+
+cb = fig.colorbar(im, ax=fig.axes, orientation='horizontal', pad=0.01, aspect=100)
+cb.ax.tick_params(labelsize=20) 
+cb.set_ticks([entry.id+1 for entry in LULC])
+cb.ax.set_xticklabels([entry.class_name for entry in LULC], rotation=45, fontsize=15)
+
+fig.suptitle('Raster mask showing crop type for each polygon', y=0.93, size=20)
+
+plt.show()
+
+```
+
+The output image is as below:
+
+![Alt Text](/images/projects/project-02/image_5.png)
+
+View one patch of the raster mask:
+
+```python
+fig = plt.figure(figsize=(20,20))
+eopatch = EOPatch.load(patch_path/f'eopatch_6', lazy_loading=True)
+
+eopatch.mask_timeless['LULC'].squeeze()
+im = plt.imshow(eopatch.mask_timeless['LULC'].squeeze(), cmap=lulc_cmap, norm=lulc_norm)
+plt.xticks([])
+plt.yticks([])
+
+fig.suptitle('Raster mask showing crop type for each polygon', y=0.93, size=20)
+
+cb = fig.colorbar(im, ax=fig.axes, orientation='horizontal', pad=0.03, aspect=100)
+cb.ax.tick_params(labelsize=20) 
+cb.set_ticks([entry.id+1 for entry in LULC])
+cb.ax.set_xticklabels([entry.class_name for entry in LULC], rotation=45, fontsize=15)
+plt.show()
+
+del eopatch
+
+```
+
+The output image is as below:
+
+
+
+![Alt Text](/images/projects/project-02/image_6.png)
+
+
+
+
+
+
+
+
+
+
+
+
+

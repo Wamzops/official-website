@@ -78,6 +78,14 @@ function createImage({ alt, src, ...props }: MediaProps & { src: string }) {
   );
 }
 
+function extractText(children: any): string {
+  if (typeof children === "string") return children;
+  if (Array.isArray(children)) return children.map(extractText).join("");
+  if (typeof children === "object" && children?.props?.children)
+    return extractText(children.props.children);
+  return "";
+}
+
 function slugify(str: string): string {
   const strWithAnd = str.replace(/&/g, " and "); // Replace & with 'and'
   return transliterate(strWithAnd, {
@@ -91,7 +99,7 @@ function createHeading(as: "h1" | "h2" | "h3" | "h4" | "h5" | "h6") {
     children,
     ...props
   }: Omit<React.ComponentProps<typeof HeadingLink>, "as" | "id">) => {
-    const slug = slugify(children as string);
+    const slug = slugify(extractText(children));
     return (
       <HeadingLink marginTop="24" marginBottom="12" as={as} id={slug} {...props}>
         {children}
@@ -316,6 +324,9 @@ const Summary = ({ children, color, ...props }: any) => {
   );
 };
 
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+
 const components = {
   details: Details,
   summary: Summary,
@@ -365,5 +376,16 @@ type CustomMDXProps = MDXRemoteProps & {
 };
 
 export function CustomMDX(props: CustomMDXProps) {
-  return <MDXRemote {...props} components={{ ...components, ...(props.components || {}) }} />;
+  return (
+    <MDXRemote
+      {...props}
+      components={{ ...components, ...(props.components || {}) }}
+      options={{
+        mdxOptions: {
+          remarkPlugins: [remarkMath],
+          rehypePlugins: [rehypeKatex],
+        },
+      }}
+    />
+  );
 }

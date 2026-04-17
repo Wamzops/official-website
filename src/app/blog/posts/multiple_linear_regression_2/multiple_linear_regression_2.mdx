@@ -1,0 +1,360 @@
+---
+title: "Multiple Linear Regression Advanced"
+order: 1
+---
+
+## Learning Objectives
+
+This blog seeks to cover the following learning objectives:
+
+- Introduction to and understanding of linearity and multicollinearity (predictors);
+- Introduction to and understanding of independence, homoscedasticity, and normality (residuals);
+- Using the `statsmodels` library to fit and evaluate a regression.
+
+## Outline
+
+We'll be moving through the following sections in order to achieve our objectives:
+
+- Dataset overview;
+- Investigating our predictor variables:
+  - Checking for linearity;
+  - Checking for multicollinearity;
+- Fitting a model with `statsmodels.OLS`;
+- Evaluating our fitted model:
+  - Checking for independence;
+  - Checking for homoscedasticity;
+  - Checking for normality;
+  - Checking for outliers.
+
+---
+
+## Introduction
+
+In *Multiple Linear Regression Part 1*, we learned about fitting a regression model using multiple predictors using `sklearn`. It was an easy process requiring the same steps as fitting a simple linear regression model using just one predictor. We then performed a rudimentary quality assessment of the fitted model using the MSE and RMSE metrics.
+
+Unfortunately, in terms of regression, `sklearn` has a very limited set of metrics and tools with which we can evaluate the quality of our fitted models. Furthermore, we are also in need of additional methods which will allow us to check the properties of our original data before we perform any modelling.
+
+In this train we cover a thorough set of steps grounded in statistical tests to better determine the quality of a regression model. This train is an adaptation of [this Medium article](https://towardsdatascience.com/how-do-you-check-the-quality-of-your-regression-model-in-python-fa61759ff685).
+
+---
+
+## Dataset Overview — MTCars
+
+For this train, we continue to make use of the MTCars dataset which we were introduced to within *Multiple Linear Regression Part 1*. We begin by importing some libraries which will help us load and explore our data.
+
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+```
+
+```python
+df = pd.read_csv(
+    'https://raw.githubusercontent.com/Explore-AI/Public-Data/master/Data/regression_sprint/mtcars.csv',
+    index_col=0
+)
+df.head(10)
+```
+
+```python
+df.describe().T
+```
+
+It appears both `vs` and `am` are categorical variables. From the dataset description [available here](https://rpubs.com/neros/61800), `vs` takes on a value of `0`/`1` depending on whether the engine layout is a *V* or *straight*, and `am` takes on a `0`/`1` value depending on whether the transmission is *automatic* or *manual*, both respectively.
+
+<Callout type="info">
+  We don't need to one-hot encode `vs` and `am` because they are binary categorical variables (only two categories each), and they already make use of zeros and ones.
+</Callout>
+
+---
+
+## Checking for Linearity
+
+The first thing we need to check is the mathematical relationship between each predictor variable and the response variable — what we are looking for is known as **linearity**. A linear relationship means that a change in the response $Y$ due to a one-unit change in the predictor $X_j$ is constant, regardless of the value of $X_j$.
+
+If we fit a regression model to a dataset that is non-linear, it will fail to adequately capture the relationship in the data, resulting in a mathematically inappropriate model. In order to check for linearity, we can produce scatter plots of each individual predictor against the response variable. The intuition here is that we are looking for obvious linear relationships.
+
+```python
+fig, axs = plt.subplots(2, 5, figsize=(14, 6))
+fig.subplots_adjust(hspace=0.5, wspace=0.2)
+axs = axs.ravel()
+
+for index, column in enumerate(df.columns):
+    axs[index - 1].set_title("{} vs. mpg".format(column), fontsize=16)
+    axs[index - 1].scatter(x=df[column], y=df['mpg'], color='blue', edgecolor='k')
+
+fig.tight_layout(pad=1)
+```
+
+It appears at least half of the variables, including all five on the top row, have an approximately linear relationship. A trend between each of `cyl`, `disp`, `hp`, `drat`, `wt`, and `qsec` and `mpg` seems to exist. However, `carb` and `gear` exhibit no linearity with `mpg`.
+
+Based on these observations, there is sufficient linearity present to proceed with applying a linear regression model.
+
+We'll create a copy of the dataset so that we can play with and process it using `statsmodels.OLS()`, which is the least squares regression module within the `statsmodels` library:
+
+```python
+df1 = df.copy()
+```
+
+---
+
+## Checking for Multicollinearity
+
+**Multicollinearity** refers to the presence of strong correlation among two or more of the predictor variables in the dataset. The presence of any correlation among predictors is detrimental to model quality for two reasons:
+
+- It tends to increase the standard error;
+- It becomes difficult to estimate the effect of any one predictor variable on the response variable.
+
+We will check for multicollinearity by generating pairwise scatter plots among predictors, and further, generating a correlation heatmap.
+
+### Pairwise Scatter Plots
+
+A pairwise scatter plot produces a visual $n \times n$ matrix, where $n$ is the total number of variables compared, in which each cell represents the relationship between two variables. The diagonal cells represent a variable compared with itself, and are substituted by a representation of the distribution of values taken by that variable.
+
+```python
+# Due to the number of visuals created, this codeblock takes about one minute to run.
+from seaborn import pairplot
+
+g = pairplot(df1.drop('mpg', axis='columns'))
+g.fig.set_size_inches(9, 9)
+```
+
+### Correlation Heatmap
+
+Another way we can visually discover linearity between two or more variables within our dataset is through the use of a **correlation heatmap**. Similar to the pairwise scatter plot, this visual presents a matrix in which each row represents a distinct variable, with each column representing the correlation between this variable and another one within the dataset.
+
+```python
+# We only compare the predictor variables, and thus drop the target `mpg` column.
+corr = df1.drop('mpg', axis='columns').corr()
+```
+
+```python
+from statsmodels.graphics.correlation import plot_corr
+
+fig = plot_corr(corr, xnames=corr.columns)
+```
+
+From both the pairwise scatterplot and correlation heatmap, we can see a number of strong correlations among predictors:
+
+- `disp` and `cyl`;
+- `cyl` and `hp`;
+- `hp` and `carb`;
+- `cyl` and `vs`;
+- `cyl` and `wt`.
+
+<Callout type="warning">
+  Keep these correlated predictor pairs in mind when we build and continue to check the quality of our model.
+</Callout>
+
+---
+
+## Fitting the Model using `statsmodels.OLS`
+
+As was previously motivated, `sklearn` is limited in terms of metrics and tools available to evaluate the appropriateness of the regression models we fit. Thus, we import the `statsmodels` library which has a rich set of statistical tools to help us.
+
+```python
+import statsmodels.formula.api as sm
+```
+
+### Generating the Regression String
+
+Those familiar with the R language will know that fitting a machine learning model requires a string of the form:
+
+```
+y ~ X
+```
+
+which is read as: *"Regress y on X"*. The `statsmodels` library works in a similar way, so we need to generate an appropriate string to feed to the method when we fit the model.
+
+```python
+formula_str = df1.columns[0] + ' ~ ' + '+'.join(df1.columns[1:])
+formula_str
+```
+
+In other words, we will regress `mpg` on all of the predictors.
+
+### Construct and Fit the Model
+
+We now go ahead and fit our model using Ordinary Least Squares (`ols`) regression from the `statsmodels` library:
+
+```python
+model = sm.ols(formula=formula_str, data=df1)
+```
+
+```python
+fitted = model.fit()
+```
+
+### Print Model Summary
+
+Unlike `sklearn` models which only produce a couple of statistics, our new model produces a rich set of statistics to help us analyse its appropriateness.
+
+```python
+print(fitted.summary())
+```
+
+---
+
+## Checking for Independence
+
+We have done checks for linearity and multicollinearity — both referring to the predictor variables. Now we move on to checking some of the artefacts of the fitted model for three more statistical phenomena which further help us determine its quality.
+
+### Residuals vs. Predictor Variables Plots
+
+The first check involves plotting the **residuals** (vertical distances between each data point and the regression hyperplane). We are looking to confirm the independence assumption, i.e.: the residuals should be independent. If they are, we will see:
+
+- Residuals approximately uniformly randomly distributed about the zero x-axis;
+- Residuals not forming specific clusters.
+
+```python
+fig, axs = plt.subplots(2, 5, figsize=(14, 6), sharey=True)
+fig.subplots_adjust(hspace=0.5, wspace=0.2)
+fig.suptitle('Predictor variables vs. model residuals', fontsize=16)
+axs = axs.ravel()
+
+for index, column in enumerate(df.columns):
+    axs[index - 1].set_title("{}".format(column), fontsize=12)
+    axs[index - 1].scatter(x=df[column], y=fitted.resid, color='blue', edgecolor='k')
+    axs[index - 1].grid(True)
+    xmin = min(df[column])
+    xmax = max(df[column])
+    axs[index - 1].hlines(y=0, xmin=xmin * 0.9, xmax=xmax * 1.1, color='red', linestyle='--', lw=3)
+    if index == 1 or index == 6:
+        axs[index - 1].set_ylabel('Residuals')
+```
+
+Observing the plots above, two things are relatively clear:
+
+- All of the residuals are slightly skewed to the positive (reaching +5 but only about -3);
+- There is no obvious clustering, except for `cyl` which may present a cluster on the value 6.
+
+Our conclusion here is that the residuals are **largely independent**.
+
+---
+
+## Checking for Homoscedasticity
+
+The next check is for whether the variance of the residuals (error terms) is constant as the fitted values increase.
+
+### Fitted vs. Residuals
+
+We can determine this by plotting the magnitude of the fitted values (i.e.: `mpg`) against the residuals. What we are looking for is the plotted points to approximately form a **rectangle** — the magnitude of the residuals should not increase as the fitted values increase (if that is the case, the data will form the shape of a cone on its side).
+
+| Term | Meaning |
+|------|---------|
+| **Homoscedasticity** | Constant variance of residuals ✅ |
+| **Heteroscedasticity** | Non-constant (increasing) variance of residuals ❌ |
+
+```python
+plt.figure(figsize=(8, 3))
+p = plt.scatter(x=fitted.fittedvalues, y=fitted.resid, edgecolor='k')
+xmin = min(fitted.fittedvalues)
+xmax = max(fitted.fittedvalues)
+plt.hlines(y=0, xmin=xmin * 0.9, xmax=xmax * 1.1, color='red', linestyle='--', lw=3)
+plt.xlabel("Fitted values", fontsize=15)
+plt.ylabel("Residuals", fontsize=15)
+plt.title("Fitted vs. residuals plot", fontsize=18)
+plt.grid(True)
+plt.show()
+```
+
+It appears the points towards the right-hand side of the plot tend to be scattered slightly less densely, indicating the presence of **heteroscedasticity**. This violates our assumption of homoscedasticity. The presence of these outliers means that those values are weighted too heavily in the prediction process, disproportionately influencing the model's performance. This in turn can lead to the confidence interval for out-of-sample predictions (unseen data) being unrealistically wide or narrow.
+
+---
+
+## Checking for Normality
+
+Here we attempt to confirm our assumption of **normality** amongst the residuals. If the residuals are non-normally distributed, confidence intervals can become too wide or too narrow, which leads to difficulty in estimating coefficients based on the minimisation of ordinary least squares.
+
+We can check for violation of the normality assumption in two different ways:
+
+1. Plotting a histogram of the normalised residuals;
+2. Generating a Q-Q plot of the residuals.
+
+### Histogram of Normalized Residuals
+
+We plot a histogram of the residuals to take a look at their distribution. It is fairly easy to pick up when a distribution looks similar to the classic *bell curve* shape of the normal distribution.
+
+```python
+plt.figure(figsize=(8, 5))
+plt.hist(fitted.resid_pearson, bins=8, edgecolor='k')
+plt.ylabel('Count', fontsize=15)
+plt.xlabel('Normalized residuals', fontsize=15)
+plt.title("Histogram of normalized residuals", fontsize=18)
+plt.show()
+```
+
+### Q-Q Plot of the Residuals
+
+A **Q-Q plot** (quantile-quantile plot) attempts to plot the theoretical quantiles of the standard normal distribution against the quantiles of the residuals. The one-to-one line (shown in red below) is the ideal line indicating normality. The closer the plotted points are to the red line, the closer the residual distribution is to the standard normal distribution.
+
+```python
+# We once again use the statsmodels library to assist us in producing our qqplot visualisation.
+from statsmodels.graphics.gofplots import qqplot
+
+plt.figure(figsize=(8, 5))
+fig = qqplot(fitted.resid_pearson, line='45', fit='True')
+plt.xticks(fontsize=13)
+plt.yticks(fontsize=13)
+plt.xlabel("Theoretical quantiles", fontsize=15)
+plt.ylabel("Sample quantiles", fontsize=15)
+plt.title("Q-Q plot of normalized residuals", fontsize=18)
+plt.grid(True)
+plt.show()
+```
+
+Judging only from the two checks above, the residuals **do appear to be normally distributed**.
+
+---
+
+## Checking for Outliers in Residuals
+
+The last check we'll make is for outliers amongst the residuals.
+
+### Plotting Cook's Distance
+
+**Cook's distance** is a calculation which measures the effect of deleting an observation from the data. Observations with large Cook's distances should be earmarked for closer examination in the analysis due to their disproportionate impact on the model.
+
+```python
+from statsmodels.stats.outliers_influence import OLSInfluence as influence
+
+inf = influence(fitted)
+```
+
+```python
+(c, p) = inf.cooks_distance
+plt.figure(figsize=(8, 5))
+plt.title("Cook's distance plot for the residuals", fontsize=16)
+plt.stem(np.arange(len(c)), c, markerfmt=",", use_line_collection=True)
+plt.grid(True)
+plt.show()
+```
+
+Clearly there are at least two values with much higher Cook's distances than the rest. A rule of thumb for determining whether a Cook's distance is too large is whether it is **greater than four times the mean Cook's distance**. Let's calculate the mean:
+
+```python
+print("Mean Cook's distance: ", c.mean())
+```
+
+It does appear that **observations 8 and 28** are highly influential in this dataset, and may warrant closer examination.
+
+---
+
+## Conclusion
+
+In this tutorial we have learned about or been introduced to:
+
+- Fitting a multivariate linear regression model with `statsmodels`;
+- Linearity and multicollinearity among predictors;
+- Independence, homoscedasticity, normality, and outliers among the residuals.
+
+---
+
+## Appendix
+
+Links to additional resources to help with the understanding of concepts presented in the train:
+
+- [How do you check the quality of your regression model in Python?](https://towardsdatascience.com/how-do-you-check-the-quality-of-your-regression-model-in-python-fa61759ff685)
+- [Analysis of the MPG difference between automatic and manual transmissions](https://rpubs.com/davoodastaraky/mtRegression)
+- [Going Deeper into Regression Analysis with Assumptions, Plots & Solutions](https://www.analyticsvidhya.com/blog/2016/07/deeper-regression-analysis-assumptions-plots-solutions/)
+
